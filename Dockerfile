@@ -48,6 +48,11 @@ COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 COPY --from=builder /app/node_modules/prebuild-install ./node_modules/prebuild-install
 
+# Copy prisma CLI + deps for runtime migrations
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
+
 # Create directories for uploads and database with correct permissions
 RUN mkdir -p /app/uploads /app/data
 RUN chown -R nextjs:nodejs /app/uploads /app/data /app
