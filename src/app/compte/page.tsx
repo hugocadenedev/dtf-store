@@ -170,10 +170,13 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                     {item.filePath && (
                       <a
                         href={`/api${item.filePath}`}
-                        download
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-foreground/5 hover:bg-foreground/10 rounded-lg text-xs font-medium transition-colors shrink-0"
+                        download={item.fileName || true}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 px-4 py-2 bg-foreground text-white hover:bg-foreground/90 rounded-xl text-xs font-semibold transition-colors shrink-0 shadow-sm"
                       >
-                        <Download size={12} /> Fichier
+                        <Download size={13} /> Télécharger
                       </a>
                     )}
                   </div>
@@ -375,6 +378,21 @@ export default function ComptePage() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
+                      {/* Quick download for first file */}
+                      {order.items.some((it) => it.filePath) && (
+                        <a
+                          href={`/api${order.items.find((it) => it.filePath)!.filePath}`}
+                          download={order.items.find((it) => it.filePath)?.fileName || true}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-foreground/5 hover:bg-foreground text-foreground/70 hover:text-white rounded-xl text-[11px] font-semibold transition-all shrink-0"
+                          title="Télécharger la planche"
+                        >
+                          <Download size={13} />
+                          <span className="hidden sm:inline">Planche</span>
+                        </a>
+                      )}
                       <span className="text-sm font-bold">{formatCurrency(order.totalAmount)}</span>
                       <ChevronRight size={16} className="text-muted group-hover:text-foreground transition-colors" />
                     </div>

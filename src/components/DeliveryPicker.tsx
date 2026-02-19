@@ -51,17 +51,14 @@ export function DeliveryPicker({ value, onChange, variant = "dark" }: DeliveryPi
 
   const today = useMemo(() => new Date(), []);
 
-  // Minimum selectable date = +48h from now
+  // Minimum selectable date = +3 business days from now
   const minDate = useMemo(() => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 2);
-    d.setHours(0, 0, 0, 0);
-    return d;
+    return addBusinessDays(today, 3);
   }, [today]);
 
-  // Quick options
+  // Quick options (start at 3 business days minimum)
   const quickOptions = useMemo(() => {
-    return [2, 3, 4, 5].map((days) => {
+    return [3, 4, 5, 7].map((days) => {
       const d = addBusinessDays(today, days);
       return {
         days,
@@ -311,7 +308,7 @@ export function DeliveryPicker({ value, onChange, variant = "dark" }: DeliveryPi
                   isLight ? "text-muted" : "text-white/40"
                 }`}
               >
-                Dates disponibles à partir du {formatShort(minDate)} · Jours ouvrés uniquement
+                Dates disponibles à partir du {formatShort(minDate)} · Min. 3 jours ouvrés
               </p>
             </div>
           </motion.div>

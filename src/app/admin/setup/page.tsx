@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Shield, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Shield, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AdminSetupPage() {
@@ -11,6 +11,21 @@ export default function AdminSetupPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  // Redirect if admin already exists
+  useEffect(() => {
+    fetch("/api/admin/setup")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.hasAdmin) {
+          router.replace("/admin");
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => setChecking(false));
+  }, [router]);
 
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,10 +46,18 @@ export default function AdminSetupPage() {
       }
       router.push("/admin");
     } catch {
-      setError("Erreur réseau.");
+      setError("Erreur réseau. Vérifiez votre connexion et réessayez.");
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 size={24} className="animate-spin text-muted" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
