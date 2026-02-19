@@ -1,0 +1,95 @@
+// DTF Store — Prisma Schema
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Products ────────────────────────────────────────────────────
+model Product {
+  id          String   @id @default(uuid())
+  type        String   // "metre" | "logo"
+  name        String
+  description String   @default("")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tiers      PriceTier[]
+  orderItems OrderItem[]
+}
+
+// ─── Pricing Tiers (degressive) ──────────────────────────────────
+model PriceTier {
+  id        String @id @default(uuid())
+  productId String
+  minQty    Float  // minimum quantity for this tier
+  maxQty    Float  // maximum quantity (use 99999 for unlimited)
+  unitPrice Float  // price per unit at this tier
+  label     String @default("") // e.g. "10x10cm", "A4", "A3" — for logo sizes
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// ─── Customers ───────────────────────────────────────────────────
+model Customer {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders Order[]
+}
+
+// ─── Orders ──────────────────────────────────────────────────────
+model Order {
+  id              String   @id @default(uuid())
+  customerEmail   String
+  customerName    String
+  customerFirstName String @default("")
+  customerLastName  String @default("")
+  customerPhone     String @default("")
+  customerCompany   String @default("")
+  customerAddress   String @default("")
+  customerPostalCode String @default("")
+  customerCity      String @default("")
+  customerId      String?
+  stripeSessionId String   @unique
+  paymentStatus   String   @default("pending") // pending | paid | failed
+  orderStatus     String   @default("received") // received | preparing | shipped
+  totalAmount     Float
+  currency        String   @default("EUR")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  customer Customer?   @relation(fields: [customerId], references: [id])
+  items    OrderItem[]
+
+  @@index([customerId])
+  @@index([customerEmail])
+}
+
+// ─── Order Items ─────────────────────────────────────────────────
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productId   String
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+  sizeLabel   String  @default("") // e.g. "A4", "10x10cm", or length in metres
+  fileName    String  @default("") // uploaded file name
+  filePath    String  @default("") // stored file path
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}

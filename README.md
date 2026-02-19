@@ -1,36 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DTF Store — Application de vente de transferts DTF
 
-## Getting Started
+Application web professionnelle de vente de transferts DTF (Direct To Film) avec calculateur de prix dégressifs, upload de fichiers et paiement Stripe.
 
-First, run the development server:
+## Stack technique
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework** : Next.js 16 (App Router)
+- **Langage** : TypeScript
+- **Styles** : Tailwind CSS 4 — design flat, typographie Suisse
+- **Base de données** : SQLite via Prisma ORM 7 + better-sqlite3 adapter
+- **Paiement** : Stripe Checkout (API complète + Webhooks)
+- **Upload** : react-dropzone (drag & drop PDF/PNG)
+- **Icônes** : Lucide React
+
+## Architecture
+
+```
+src/
+├── app/
+│   ├── page.tsx                    # Home — navigation duo (Mètre / Logo)
+│   ├── configure/
+│   │   ├── metre/page.tsx          # Configurateur DTF au Mètre
+│   │   └── logo/page.tsx           # Configurateur DTF au Logo
+│   ├── checkout/
+│   │   ├── page.tsx                # Panier + formulaire client
+│   │   ├── success/page.tsx        # Confirmation de commande
+│   │   └── cancel/page.tsx         # Annulation
+│   ├── admin/
+│   │   ├── layout.tsx              # Layout admin avec sidebar
+│   │   ├── page.tsx                # Dashboard (KPIs)
+│   │   ├── pricing/page.tsx        # Éditeur de grilles tarifaires
+│   │   └── orders/page.tsx         # Gestion des commandes
+│   └── api/
+│       ├── products/               # CRUD produits
+│       ├── tiers/                  # CRUD paliers de prix
+│       ├── orders/                 # Gestion commandes
+│       ├── checkout/               # Création session Stripe
+│       ├── webhook/                # Webhook Stripe
+│       ├── upload/                 # Upload fichiers
+│       ├── uploads/[filename]/     # Téléchargement fichiers
+│       └── seed/                   # Seed base de données
+├── components/
+│   ├── Header.tsx                  # Navigation principale
+│   ├── Footer.tsx                  # Pied de page
+│   ├── FileUploader.tsx            # Drag & drop zone
+│   ├── PriceTable.tsx              # Grille tarifaire interactive
+│   └── StepIndicator.tsx           # Indicateur d'étapes (1-2-3)
+├── context/
+│   └── CartContext.tsx              # État global du panier
+├── lib/
+│   ├── prisma.ts                   # Client Prisma singleton
+│   ├── stripe.ts                   # Client Stripe
+│   ├── pricing.ts                  # Calculateur de prix dégressifs
+│   └── types.ts                    # Types TypeScript
+└── generated/prisma/               # Client Prisma généré
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 1. Installer les dépendances
+npm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# 2. Générer le client Prisma
+npx prisma generate
 
-## Learn More
+# 3. Appliquer les migrations
+npx prisma migrate dev
 
-To learn more about Next.js, take a look at the following resources:
+# 4. Configurer les variables d'environnement
+# Éditer .env avec vos clés Stripe
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 5. Lancer le serveur de développement
+npm run dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 6. Initialiser les données (produits + tarifs)
+# Appeler POST http://localhost:3000/api/seed
+```
 
-## Deploy on Vercel
+## Variables d'environnement (.env)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```env
+DATABASE_URL="file:./dev.db"
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+STRIPE_SECRET_KEY="sk_test_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+ADMIN_PASSWORD="dtf-admin-2026"
+```
+
+## Fonctionnalités
+
+### Côté client
+- **Home Page Duo** : deux entrées claires "DTF au Mètre" et "DTF au Logo"
+- **Tunnel d'achat en 3 étapes** : Configuration → Upload → Résumé
+- **Calculateur de prix dégressif** : affichage temps réel du prix selon quantité
+- **Upload drag & drop** : PNG et PDF avec prévisualisation
+- **Paiement Stripe Checkout** : redirection sécurisée
+
+### Back-Office (/admin)
+- **Dashboard** : KPIs (produits actifs, commandes payées, CA)
+- **Gestion des tarifs** : ajout/suppression/modification des paliers de prix par produit — sans toucher au code
+- **Gestion des commandes** : liste, statuts (Reçue → En préparation → Expédiée), téléchargement des fichiers clients
+
+### Grille tarifaire par défaut
+
+**DTF au Mètre :**
+| Quantité | Prix/m |
+|----------|--------|
+| 0.5–0.99m | 25 € |
+| 1–4.99m | 20 € |
+| 5–9.99m | 15 € |
+| 10–24.99m | 12 € |
+| 25m+ | 10 € |
+
+**DTF au Logo (10×10cm) :**
+| Quantité | Prix/pce |
+|----------|----------|
+| 1–9 | 3,50 € |
+| 10–49 | 2,80 € |
+| 50–99 | 2,20 € |
+| 100–499 | 1,80 € |
+| 500+ | 1,40 € |
+
+## Stripe Webhooks
+
+Pour tester les webhooks en local :
+```bash
+stripe listen --forward-to localhost:3000/api/webhook
+```
+
+## License
+
+Propriétaire — Tous droits réservés.
