@@ -23,7 +23,15 @@ ENV STRIPE_WEBHOOK_SECRET=whsec_build_placeholder
 ENV JWT_SECRET=build_placeholder_secret
 RUN npm run build
 
-# ─── Stage 3: Production Runner ──────────────────────────────────
+# ─── Stage 3: Migrator (for running DB migrations) ───────────────
+FROM node:20-alpine AS migrator
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
+ENTRYPOINT ["npx", "prisma", "migrate", "deploy"]
+
+# ─── Stage 4: Production Runner ──────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -47,11 +55,6 @@ COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlit
 COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 COPY --from=builder /app/node_modules/prebuild-install ./node_modules/prebuild-install
-
-# Copy prisma CLI + deps for runtime migrations
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
 
 # Create directories for uploads and database with correct permissions
 RUN mkdir -p /app/uploads /app/data

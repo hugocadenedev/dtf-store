@@ -1,6 +1,17 @@
-version: "3.8"
-
 services:
+  # ─── Database Migrations ─────────────────────────────────────────
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    container_name: dtf-store-migrator
+    env_file: .env.production
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/production.db
+
   # ─── Next.js App ─────────────────────────────────────────────────
   app:
     build:
