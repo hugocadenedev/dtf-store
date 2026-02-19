@@ -5,7 +5,10 @@ import path from "path";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
-  const dbPath = path.join(process.cwd(), "dev.db");
+  const dbPath =
+    process.env.NODE_ENV === "production"
+      ? path.join(process.cwd(), "data", "production.db")
+      : path.join(process.cwd(), "dev.db");
   const adapter = new PrismaBetterSqlite3({ url: dbPath });
   return new PrismaClient({ adapter });
 }
