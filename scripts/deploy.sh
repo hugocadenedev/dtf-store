@@ -22,15 +22,22 @@ fi
 # ─── 3. Create required directories ──────────────────────────────
 echo "📁 Creating data directories..."
 mkdir -p data uploads
+# Ensure nextjs user (uid 1001) can write to data & uploads
+chown -R 1001:1001 data uploads
 
 # ─── 4. Build & start containers ─────────────────────────────────
 echo "🐳 Building and starting Docker containers..."
 docker compose build --no-cache
-docker compose up -d
 
 # ─── 5. Run database migrations ──────────────────────────────────
 echo "🗄️  Running database migrations..."
-docker compose exec app npx prisma migrate deploy
+docker compose run --rm migrator
+# Fix DB file permissions after migration (created as root)
+chown -R 1001:1001 data
+
+# ─── 6. Start app ────────────────────────────────────────────────
+echo "🚀 Starting application..."
+docker compose up -d app
 
 # ─── 6. Health check ─────────────────────────────────────────────
 echo "🏥 Checking app health..."
