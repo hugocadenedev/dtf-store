@@ -117,6 +117,9 @@ export default function AdminLayout({
       return;
     }
 
+    // Reset to loading before async checks to prevent stale "ok" state
+    setAuthState("loading");
+
     try {
       // 1. Check if any admin exists
       const setupRes = await fetch("/api/admin/setup");
@@ -147,7 +150,8 @@ export default function AdminLayout({
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkAuth, pathname]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });

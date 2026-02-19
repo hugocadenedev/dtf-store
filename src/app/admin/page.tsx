@@ -105,7 +105,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetch("/api/admin/stats", { credentials: "include" })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Unauthorized");
+        return r.json();
+      })
       .then((data) => {
         setStats(data);
         setLoading(false);
