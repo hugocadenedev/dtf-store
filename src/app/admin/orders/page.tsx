@@ -17,20 +17,22 @@ import {
   Phone,
   Building2,
   MapPin,
+  Search,
+  RefreshCw,
 } from "lucide-react";
 import type { Order, OrderStatus } from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; color: string }[] = [
-  { value: "received", label: "Reçue", color: "bg-blue-100 text-blue-700" },
-  { value: "preparing", label: "En préparation", color: "bg-amber-100 text-amber-700" },
-  { value: "shipped", label: "Expédiée", color: "bg-emerald-100 text-emerald-700" },
+  { value: "received", label: "Reçue", color: "bg-blue-50 text-blue-600" },
+  { value: "preparing", label: "En préparation", color: "bg-amber-50 text-amber-600" },
+  { value: "shipped", label: "Expédiée", color: "bg-emerald-50 text-emerald-600" },
 ];
 
 const PAYMENT_LABELS: Record<string, { label: string; cls: string }> = {
-  paid: { label: "Payé", cls: "bg-emerald-100 text-emerald-700" },
-  pending: { label: "En attente", cls: "bg-amber-100 text-amber-700" },
-  failed: { label: "Échoué", cls: "bg-red-100 text-red-700" },
+  paid: { label: "Payé", cls: "bg-emerald-50 text-emerald-600" },
+  pending: { label: "En attente", cls: "bg-amber-50 text-amber-600" },
+  failed: { label: "Échoué", cls: "bg-red-50 text-red-600" },
 };
 
 function formatCurrency(amount: number) {
@@ -265,21 +267,29 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/orders")
+  const loadOrders = useCallback(() => {
+    setLoading(true);
+    fetch("/api/orders", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data : []);
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   const updateStatus = async (orderId: string, newStatus: OrderStatus) => {
     await fetch(`/api/orders/${orderId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ orderStatus: newStatus }),
     });
 
@@ -290,16 +300,35 @@ export default function AdminOrders() {
     );
   };
 
-  const filtered =
-    filter === "all"
-      ? orders
-      : orders.filter((o) => o.orderStatus === filter);
+  const filtered = orders
+    .filter((o) => {
+      if (filter !== "all" && o.orderStatus !== filter) return false;
+      if (paymentFilter !== "all" && o.paymentStatus !== paymentFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return (
+          o.customerName.toLowerCase().includes(q) ||
+          o.customerEmail.toLowerCase().includes(q) ||
+          o.id.toLowerCase().includes(q) ||
+          (o.customerPhone || "").includes(q) ||
+          (o.customerCompany || "").toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
 
   const selectedOrder = orders.find((o) => o.id === selectedOrderId) ?? null;
+
+  // Quick stats
+  const paidCount = orders.filter((o) => o.paymentStatus === "paid").length;
+  const totalRevenue = orders
+    .filter((o) => o.paymentStatus === "paid")
+    .reduce((s, o) => s + o.totalAmount, 0);
 
   if (loading) return (
     <div className="space-y-4">
       <div className="h-8 w-48 shimmer" />
+      <div className="h-12 shimmer rounded-xl" />
       <div className="h-20 shimmer rounded-xl" />
       <div className="h-20 shimmer rounded-xl" />
       <div className="h-20 shimmer rounded-xl" />
@@ -308,21 +337,57 @@ export default function AdminOrders() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Commandes</h1>
-          <p className="text-sm text-muted mt-1">{orders.length} commande{orders.length > 1 ? "s" : ""} au total</p>
+          <p className="text-sm text-muted mt-1">
+            {orders.length} commande{orders.length > 1 ? "s" : ""}
+            <span className="mx-1.5">·</span>
+            {paidCount} payée{paidCount > 1 ? "s" : ""}
+            <span className="mx-1.5">·</span>
+            {formatCurrency(totalRevenue)} CA
+          </p>
         </div>
+        <button
+          onClick={loadOrders}
+          className="btn-secondary text-xs self-start"
+        >
+          <RefreshCw size={13} /> Actualiser
+        </button>
+      </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1 max-w-md">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            placeholder="Rechercher nom, email, société, ID…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="text-sm"
+            style={{ paddingLeft: "2.25rem" }}
+          />
+        </div>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="text-sm w-auto rounded-lg"
         >
-          <option value="all">Toutes ({orders.length})</option>
+          <option value="all">Statut: Toutes ({orders.length})</option>
           <option value="received">Reçues ({orders.filter((o) => o.orderStatus === "received").length})</option>
           <option value="preparing">En préparation ({orders.filter((o) => o.orderStatus === "preparing").length})</option>
           <option value="shipped">Expédiées ({orders.filter((o) => o.orderStatus === "shipped").length})</option>
+        </select>
+        <select
+          value={paymentFilter}
+          onChange={(e) => setPaymentFilter(e.target.value)}
+          className="text-sm w-auto rounded-lg"
+        >
+          <option value="all">Paiement: Tous</option>
+          <option value="paid">Payé ({orders.filter((o) => o.paymentStatus === "paid").length})</option>
+          <option value="pending">En attente ({orders.filter((o) => o.paymentStatus === "pending").length})</option>
+          <option value="failed">Échoué ({orders.filter((o) => o.paymentStatus === "failed").length})</option>
         </select>
       </div>
 

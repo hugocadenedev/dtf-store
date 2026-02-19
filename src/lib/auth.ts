@@ -3,26 +3,23 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { prisma } from "./prisma";
 
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("JWT_SECRET environment variable is required in production");
+// JWT_SECRET is validated at runtime, not build time
+function getSecret() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET environment variable is required in production");
+  }
+  return new TextEncoder().encode(
+    process.env.JWT_SECRET || "dtf-store-dev-secret-key-not-for-production"
+  );
 }
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dtf-store-dev-secret-key-not-for-production"
-);
-
 const COOKIE_NAME = "dtf-session";
-
-/** Comma-separated list of admin emails (set in .env) */
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 export interface SessionPayload {
   customerId: string;
   email: string;
   name: string;
+  role: string;
 }
 
 /* ─── JWT helpers ─────────────────────────────────────────── */
@@ -31,12 +28,12 @@ export async function signToken(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("30d")
     .setIssuedAt()
-    .sign(SECRET);
+    .sign(getSecret());
 }
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as unknown as SessionPayload;
   } catch {
     return null;
@@ -75,18 +72,13 @@ export async function getCurrentCustomer() {
 
   const customer = await prisma.customer.findUnique({
     where: { id: session.customerId },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
 
   return customer;
 }
 
 /* ─── Admin check (API routes) ────────────────────────────── */
-/**
- * Checks whether the request comes from an authenticated admin.
- * Admin emails are configured via the ADMIN_EMAILS env variable.
- * Works with API route handlers (reads cookie from request headers).
- */
 export async function isAdmin(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) return false;
@@ -94,11 +86,18 @@ export async function isAdmin(req: NextRequest): Promise<boolean> {
   const session = await verifyToken(token);
   if (!session) return false;
 
-  if (ADMIN_EMAILS.length === 0) {
-    // Fallback: if no ADMIN_EMAILS configured, deny all
-    console.warn("ADMIN_EMAILS not configured — admin access denied");
-    return false;
-  }
+  // Check DB role (source of truth)
+  const customer = await prisma.customer.findUnique({
+    where: { id: session.customerId },
+    select: { role: true },
+  });
 
-  return ADMIN_EMAILS.includes(session.email.toLowerCase());
+  return customer?.role === "admin";
+}
+
+/* ─── Get session from request ────────────────────────────── */
+export async function getSessionFromRequest(req: NextRequest): Promise<SessionPayload | null> {
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  return verifyToken(token);
 }

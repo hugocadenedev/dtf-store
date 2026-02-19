@@ -62,6 +62,16 @@ export function Header() {
     setMobileOpen(false);
   }, [pathname]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
   return (
     <header
       className={`sticky top-5 sm:top-6 md:top-8 z-50 transition-all duration-300 mx-2 sm:mx-3 md:mx-4 rounded-2xl ${
@@ -261,39 +271,120 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — fullscreen glass overlay */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="sm:hidden border-t border-white/10 overflow-hidden rounded-b-2xl"
-            style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="sm:hidden fixed inset-0 z-[100]"
+            style={{
+              background: "rgba(180, 200, 220, 0.45)",
+              backdropFilter: "blur(32px) saturate(1.4)",
+              WebkitBackdropFilter: "blur(32px) saturate(1.4)",
+            }}
           >
-            <nav className="flex flex-col p-3 gap-1">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
+              className="flex flex-col h-full px-7 pt-10 pb-8"
+            >
+              {/* Top — Logo */}
               <Link
-                href="/configure/metre"
+                href="/"
                 onClick={() => setMobileOpen(false)}
-                className="text-sm font-medium py-2.5 px-3 rounded-xl text-foreground hover:bg-foreground/5 transition-colors"
+                className="text-xl font-bold text-white tracking-tight mb-10"
               >
-                Planches DTF au mètre
+                DTF Store
               </Link>
-              <Link
-                href="/configure/logo"
-                onClick={() => setMobileOpen(false)}
-                className="text-sm font-medium py-2.5 px-3 rounded-xl text-foreground hover:bg-foreground/5 transition-colors"
+
+              {/* Nav links */}
+              <nav className="flex flex-col gap-1">
+                <p className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">
+                  Produits
+                </p>
+                {[
+                  { href: "/configure/metre", label: "DTF au mètre" },
+                  { href: "/configure/logo", label: "DTF au logo" },
+                  { href: "/configure/builder", label: "Builder" },
+                ].map((link, i) => (
+                  <motion.div
+                    key={link.href}
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05, duration: 0.3 }}
+                  >
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="block text-lg font-semibold text-white py-2 hover:text-white/70 transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
+
+                <div className="h-px bg-white/10 my-4" />
+
+                {[
+                  { href: "/checkout", label: "Panier", count },
+                  {
+                    href: customer ? "/compte" : "/compte/connexion",
+                    label: customer ? "Mon compte" : "Connexion",
+                  },
+                ].map((link, i) => (
+                  <motion.div
+                    key={link.href + link.label}
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.25 + i * 0.05, duration: 0.3 }}
+                  >
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2 text-lg font-semibold text-white py-2 hover:text-white/70 transition-colors"
+                    >
+                      {link.label}
+                      {"count" in link && typeof link.count === "number" && link.count > 0 && (
+                        <span className="text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">
+                          {link.count}
+                        </span>
+                      )}
+                    </Link>
+                  </motion.div>
+                ))}
+              </nav>
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Bottom — Close + CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.3 }}
+                className="flex items-center gap-4"
               >
-                Planche DTF au logo
-              </Link>
-              <Link
-                href={customer ? "/compte" : "/compte/connexion"}
-                onClick={() => setMobileOpen(false)}
-                className="text-sm font-medium py-2.5 px-3 rounded-xl text-foreground hover:bg-foreground/5 transition-colors flex items-center gap-2"
-              >
-                <UserCircle size={16} /> {customer ? "Mon compte" : "Connexion"}
-              </Link>
-            </nav>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-2 text-white/60 hover:text-white transition-colors"
+                  aria-label="Fermer le menu"
+                >
+                  <X size={24} />
+                </button>
+                <Link
+                  href={customer ? "/compte" : "/compte/inscription"}
+                  onClick={() => setMobileOpen(false)}
+                  className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold rounded-full bg-white text-foreground hover:bg-white/90 shadow-lg transition-all"
+                >
+                  {customer ? "Mon espace" : "S'inscrire"}
+                </Link>
+              </motion.div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

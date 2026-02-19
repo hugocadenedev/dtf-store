@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, AlertTriangle, X, Package } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "@/lib/types";
 
 interface TierRow {
@@ -21,6 +22,8 @@ export default function AdminPricing() {
   const [editDesc, setEditDesc] = useState("");
   const [savingDesc, setSavingDesc] = useState(false);
   const [descMessage, setDescMessage] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // New product form
   const [newName, setNewName] = useState("");
@@ -87,6 +90,7 @@ export default function AdminPricing() {
       await fetch(`/api/products/${selectedId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ...products.find((p) => p.id === selectedId),
           description: editDesc,
@@ -110,6 +114,7 @@ export default function AdminPricing() {
       await fetch("/api/tiers", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ productId: selectedId, tiers }),
       });
       setMessage("Grille tarifaire enregistrée.");
@@ -126,6 +131,7 @@ export default function AdminPricing() {
     await fetch("/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         name: newName,
         type: newType,
@@ -135,6 +141,26 @@ export default function AdminPricing() {
     setNewName("");
     setNewDesc("");
     await loadProducts();
+  };
+
+  const deleteProduct = async (id: string) => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        if (selectedId === id) {
+          setSelectedId("");
+          setTiers([]);
+        }
+        await loadProducts();
+      }
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(null);
+    }
   };
 
   if (loading) return (
@@ -147,9 +173,12 @@ export default function AdminPricing() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-8">
-        Gestion des tarifs
+      <h1 className="text-2xl font-bold tracking-tight mb-2">
+        Produits & Tarifs
       </h1>
+      <p className="text-sm text-muted mb-8">
+        {products.length} produit{products.length > 1 ? "s" : ""}
+      </p>
 
       {/* Create product */}
       <div className="card p-6 mb-8">
@@ -174,28 +203,102 @@ export default function AdminPricing() {
             onChange={(e) => setNewDesc(e.target.value)}
           />
           <button onClick={createProduct} className="btn-primary text-xs">
-            <Plus size={14} /> Creer
+            <Plus size={14} /> Créer
           </button>
         </div>
       </div>
 
-      {/* Select product */}
+      {/* Product list */}
       <div className="mb-6">
-        <label className="block text-xs font-semibold text-muted mb-2">
-          Selectionner un produit
-        </label>
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-        >
-          <option value="">— Choisir —</option>
+        <h2 className="text-sm font-bold mb-3">Produits existants</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.type})
-            </option>
+            <div
+              key={p.id}
+              onClick={() => setSelectedId(p.id)}
+              className={`card p-4 cursor-pointer transition-all ${
+                selectedId === p.id
+                  ? "ring-2 ring-foreground/20 shadow-md"
+                  : "hover:shadow-md"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-foreground/5 flex items-center justify-center">
+                    <Package size={14} className="text-muted" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{p.name}</p>
+                    <p className="text-[10px] text-muted uppercase tracking-wider">
+                      {p.type === "metre" ? "Au mètre" : "Au logo"}
+                      <span className="mx-1">·</span>
+                      {p.tiers.length} palier{p.tiers.length > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteConfirm(p.id);
+                  }}
+                  className="p-1.5 rounded-lg text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title="Supprimer"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              {p.description && (
+                <p className="text-xs text-muted line-clamp-2 mt-1">{p.description}</p>
+              )}
+            </div>
           ))}
-        </select>
+        </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={20} className="text-red-500" />
+              </div>
+              <h3 className="text-center text-lg font-bold mb-2">Supprimer ce produit ?</h3>
+              <p className="text-center text-sm text-muted mb-5">
+                Le produit <strong>{products.find((p) => p.id === deleteConfirm)?.name}</strong> et
+                tous ses paliers seront supprimés définitivement.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="btn-secondary flex-1 text-sm"
+                  disabled={deleting}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => deleteProduct(deleteConfirm)}
+                  disabled={deleting}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-full transition-colors"
+                >
+                  {deleting ? "Suppression…" : "Supprimer"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Description editor */}
       {selectedId && (
