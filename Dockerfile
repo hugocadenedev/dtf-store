@@ -17,6 +17,10 @@ COPY . .
 RUN npx prisma generate
 
 # Build Next.js (standalone output)
+# Provide dummy env vars so the build doesn't fail on missing secrets
+ENV STRIPE_SECRET_KEY=sk_build_placeholder
+ENV STRIPE_WEBHOOK_SECRET=whsec_build_placeholder
+ENV JWT_SECRET=build_placeholder_secret
 RUN npm run build
 
 # ─── Stage 3: Production Runner ──────────────────────────────────
