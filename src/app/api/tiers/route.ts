@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 
 // GET /api/tiers?productId=xxx
 export async function GET(req: NextRequest) {
@@ -16,8 +17,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(tiers);
 }
 
-// POST /api/tiers — create tier
+// POST /api/tiers — create tier (admin only)
 export async function POST(req: NextRequest) {
+  if (!(await isAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const { productId, minQty, maxQty, unitPrice, label } = body;
 
@@ -41,8 +46,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(tier, { status: 201 });
 }
 
-// PUT /api/tiers — bulk update tiers for a product
+// PUT /api/tiers — bulk update tiers for a product (admin only)
 export async function PUT(req: NextRequest) {
+  if (!(await isAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const { productId, tiers } = body;
 

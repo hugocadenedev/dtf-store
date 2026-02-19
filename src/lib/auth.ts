@@ -1,12 +1,23 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
 import { prisma } from "./prisma";
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET environment variable is required in production");
+}
+
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dtf-store-secret-key-change-in-production"
+  process.env.JWT_SECRET || "dtf-store-dev-secret-key-not-for-production"
 );
 
 const COOKIE_NAME = "dtf-session";
+
+/** Comma-separated list of admin emails (set in .env) */
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 export interface SessionPayload {
   customerId: string;
@@ -68,4 +79,26 @@ export async function getCurrentCustomer() {
   });
 
   return customer;
+}
+
+/* ─── Admin check (API routes) ────────────────────────────── */
+/**
+ * Checks whether the request comes from an authenticated admin.
+ * Admin emails are configured via the ADMIN_EMAILS env variable.
+ * Works with API route handlers (reads cookie from request headers).
+ */
+export async function isAdmin(req: NextRequest): Promise<boolean> {
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  if (!token) return false;
+
+  const session = await verifyToken(token);
+  if (!session) return false;
+
+  if (ADMIN_EMAILS.length === 0) {
+    // Fallback: if no ADMIN_EMAILS configured, deny all
+    console.warn("ADMIN_EMAILS not configured — admin access denied");
+    return false;
+  }
+
+  return ADMIN_EMAILS.includes(session.email.toLowerCase());
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCustomer } from "@/lib/auth";
+import { getUnitPrice, type PriceTier } from "@/lib/pricing";
 // import { stripe } from "@/lib/stripe"; // ← Stripe temporairement désactivé
 
 interface CheckoutItem {
@@ -40,8 +41,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const totalAmount = items.reduce(
-      (sum: number, item: CheckoutItem) => sum + item.totalPrice,
+    // ── Server-side price verification ──
+    // Fetch all referenced products with their tiers in one query
+    const productIds = [...new Set(items.map((i) => i.productId))];
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, active: true },
+      include: { tiers: { orderBy: { minQty: "asc" } } },
+    });
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const verifiedItems = items.map((item) => {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        throw new Error(`Produit introuvable: ${item.productId}`);
+      }
+
+      // Filter tiers by sizeLabel if it exists
+      let relevantTiers: PriceTier[] = product.tiers;
+      if (item.sizeLabel) {
+        const labelTiers = product.tiers.filter((t) => t.label === item.sizeLabel);
+        if (labelTiers.length > 0) relevantTiers = labelTiers;
+      }
+
+      const serverUnitPrice = getUnitPrice(relevantTiers, item.quantity);
+      const serverTotalPrice = parseFloat((serverUnitPrice * item.quantity).toFixed(2));
+
+      return {
+        ...item,
+        unitPrice: serverUnitPrice,
+        totalPrice: serverTotalPrice,
+      };
+    });
+
+    const totalAmount = verifiedItems.reduce(
+      (sum, item) => sum + item.totalPrice,
       0
     );
 
@@ -69,7 +103,7 @@ export async function POST(req: NextRequest) {
         orderStatus: "received",
         totalAmount,
         items: {
-          create: items.map((item: CheckoutItem) => ({
+          create: verifiedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,

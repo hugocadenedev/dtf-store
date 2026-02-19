@@ -14,6 +14,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Adresse email invalide." },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize name (strip HTML/script tags)
+    const sanitizedName = name.replace(/<[^>]*>/g, "").trim();
+    if (!sanitizedName || sanitizedName.length > 100) {
+      return NextResponse.json(
+        { error: "Nom invalide (maximum 100 caractères)." },
+        { status: 400 }
+      );
+    }
+
     if (password.length < 6) {
       return NextResponse.json(
         { error: "Le mot de passe doit contenir au moins 6 caractères." },
@@ -22,7 +40,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already exists
-    const existing = await prisma.customer.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.customer.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json(
         { error: "Un compte existe déjà avec cet email." },
@@ -33,12 +52,12 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const customer = await prisma.customer.create({
-      data: { email, name, passwordHash },
+      data: { email: normalizedEmail, name: sanitizedName, passwordHash },
     });
 
     // Link any existing orders with the same email
     await prisma.order.updateMany({
-      where: { customerEmail: email, customerId: null },
+      where: { customerEmail: normalizedEmail, customerId: null },
       data: { customerId: customer.id },
     });
 

@@ -7,7 +7,14 @@ export async function GET(
   { params }: { params: Promise<{ filename: string }> }
 ) {
   const { filename } = await params;
-  const filePath = path.join(process.cwd(), "uploads", filename);
+
+  // Prevent path traversal
+  const sanitized = path.basename(filename);
+  if (sanitized !== filename || filename.includes("..")) {
+    return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+  }
+
+  const filePath = path.join(process.cwd(), "uploads", sanitized);
 
   try {
     const buffer = await readFile(filePath);

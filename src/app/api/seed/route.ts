@@ -1,7 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // Block in production entirely
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Seed disabled in production" }, { status: 403 });
+  }
+
+  // Require admin auth even in dev
+  if (!(await isAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     // Clean existing data
     await prisma.orderItem.deleteMany();

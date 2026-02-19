@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 
 // GET /api/products/[id]
 export async function GET(
@@ -19,11 +20,15 @@ export async function GET(
   return NextResponse.json(product);
 }
 
-// PUT /api/products/[id]
+// PUT /api/products/[id] (admin only)
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = await req.json();
 
@@ -41,11 +46,15 @@ export async function PUT(
   return NextResponse.json(product);
 }
 
-// DELETE /api/products/[id]
+// DELETE /api/products/[id] (admin only)
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await isAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   await prisma.product.delete({ where: { id } });
   return NextResponse.json({ success: true });
