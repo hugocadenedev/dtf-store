@@ -36,6 +36,8 @@ export interface Order {
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
   totalAmount: number;
+  shippingAmount: number;
+  vatAmount: number;
   currency: string;
   createdAt: string;
   updatedAt: string;
@@ -65,6 +67,4 @@ export interface CartItem {
   sizeLabel: string;
   file: File | null;
   fileName: string;
-  deliveryDate?: string;
-  deliveryLabel?: string;
 }

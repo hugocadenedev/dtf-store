@@ -79,6 +79,21 @@ export async function POST(req: NextRequest) {
       0
     );
 
+    // ── Fetch shop settings for shipping + VAT ──
+    let shopSettings = await prisma.shopSettings.findUnique({ where: { id: "default" } });
+    if (!shopSettings) {
+      shopSettings = await prisma.shopSettings.create({
+        data: { id: "default", shippingPrice: 8.9, freeShippingThreshold: 150, vatPercent: 20 },
+      });
+    }
+
+    const shippingAmount = (shopSettings.freeShippingThreshold > 0 && totalAmount >= shopSettings.freeShippingThreshold)
+      ? 0
+      : shopSettings.shippingPrice;
+    const totalHT = totalAmount + shippingAmount;
+    const vatAmount = parseFloat((totalHT * shopSettings.vatPercent / 100).toFixed(2));
+    const totalTTC = parseFloat((totalHT + vatAmount).toFixed(2));
+
     // ═══ MODE TEST : pas de Stripe, commande directement validée ═══
     const testSessionId = `test_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
@@ -101,7 +116,9 @@ export async function POST(req: NextRequest) {
         stripeSessionId: testSessionId,
         paymentStatus: "paid",
         orderStatus: "received",
-        totalAmount,
+        totalAmount: totalTTC,
+        shippingAmount,
+        vatAmount,
         items: {
           create: verifiedItems.map((item) => ({
             productId: item.productId,

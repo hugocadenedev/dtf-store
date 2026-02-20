@@ -93,7 +93,7 @@ interface BuilderModalProps {
   onConfirm: (file: File, metrage: number) => void;
 }
 
-const BOARD_WIDTH = 60;
+const BOARD_WIDTH = 55;
 
 export function BuilderModal({ open, tiers, onClose, onConfirm }: BuilderModalProps) {
   /* ─── builder state ─── */
@@ -212,8 +212,8 @@ export function BuilderModal({ open, tiers, onClose, onConfirm }: BuilderModalPr
 
   /* ─── logo dialog: place logos with auto-layout ─── */
   const handleLogosConfirm = useCallback(
-    (logos: LogoEntry[]) => {
-      const { objects: newObjs, newBoardHeight } = autoLayoutLogos(logos, BOARD_WIDTH, objects);
+    (logos: LogoEntry[], spacing: number) => {
+      const { objects: newObjs, newBoardHeight } = autoLayoutLogos(logos, BOARD_WIDTH, objects, spacing);
       setObjects((prev) => [...prev, ...newObjs]);
       setBoardHeight((h) => Math.max(h, newBoardHeight));
       setSelectedId(null);

@@ -29,6 +29,7 @@ import {
   BarChart3,
   Settings2,
   Layers,
+  LayoutPanelTop,
 } from "lucide-react";
 
 /* Dynamic import — Konva needs window */
@@ -64,12 +65,12 @@ function TBtn({
       onClick={onClick}
       disabled={disabled}
       title={label}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium transition-colors shrink-0 ${
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 ${
         active
-          ? "bg-blue-600 text-white"
+          ? "bg-white/25 text-white shadow-inner"
           : accent
-          ? "bg-orange-600 text-white hover:bg-orange-500"
-          : "text-slate-300 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+          ? "bg-red-500/80 text-white hover:bg-red-500"
+          : "text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
       }`}
     >
       {icon}
@@ -81,7 +82,7 @@ function TBtn({
 /* ═══════════════════════════════════════════════════════════════════ */
 /*  Main page                                                         */
 /* ═══════════════════════════════════════════════════════════════════ */
-const BOARD_WIDTH = 60; // cm — DTF roll width
+const BOARD_WIDTH = 55; // cm — DTF roll width
 
 export default function BuilderPage() {
   const router = useRouter();
@@ -213,8 +214,8 @@ export default function BuilderPage() {
 
   /* ─── logo dialog: place logos with auto-layout ─── */
   const handleLogosConfirm = useCallback(
-    (logos: LogoEntry[]) => {
-      const { objects: newObjs, newBoardHeight } = autoLayoutLogos(logos, BOARD_WIDTH, objects);
+    (logos: LogoEntry[], spacing: number) => {
+      const { objects: newObjs, newBoardHeight } = autoLayoutLogos(logos, BOARD_WIDTH, objects, spacing);
       setObjects((prev) => [...prev, ...newObjs]);
       setBoardHeight((h) => Math.max(h, newBoardHeight));
       setSelectedId(null);
@@ -297,8 +298,6 @@ export default function BuilderPage() {
         sizeLabel: `${metrageGlobal}m (${quantity} planche${quantity > 1 ? "s" : ""})`,
         file,
         fileName: "planche-dtf.pdf",
-        deliveryDate: "",
-        deliveryLabel: "",
       });
       router.push("/checkout");
     } catch (err) {
@@ -311,21 +310,34 @@ export default function BuilderPage() {
   /*  RENDER                                                        */
   /* ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900 text-white">
+    <div className="fixed inset-0 z-50 flex flex-col">
+      {/* Background layers */}
+      <div className="absolute inset-0 hero-gradient" />
+      <div className="absolute inset-0 bg-black/20" />
+
       {/* ────── Title bar ────── */}
-      <div className="flex items-center justify-between px-4 h-11 bg-slate-900 border-b border-slate-700 shrink-0">
-        <h1 className="text-sm font-bold tracking-wide">Concevoir ma planche</h1>
+      <div className="relative z-10 flex items-center justify-between px-5 h-14 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+            <LayoutPanelTop size={16} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white tracking-wide">Concevoir ma planche</h1>
+            <p className="text-[10px] text-white/50">Éditeur de planche DTF</p>
+          </div>
+        </div>
         <button
           onClick={() => router.back()}
-          className="p-1.5 rounded hover:bg-slate-700 transition-colors"
+          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur flex items-center justify-center transition-colors"
           title="Fermer"
         >
-          <X size={16} />
+          <X size={15} className="text-white" />
         </button>
       </div>
 
       {/* ────── Toolbar ────── */}
-      <div className="flex items-center gap-1 px-3 h-11 bg-slate-800 border-b border-slate-700 shrink-0 overflow-x-auto">
+      <div className="relative z-10 flex items-center gap-1 px-4 h-11 shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1 glass rounded-xl px-2 py-1" style={{ color: "white" }}>
         {/* Tools */}
         <TBtn
           icon={<MousePointer2 size={13} />}
@@ -356,18 +368,19 @@ export default function BuilderPage() {
           onClick={() => setActiveTool("shape")}
         />
 
+        <div className="mx-1 h-5 w-px bg-white/20 shrink-0" />
+
         {/* Color */}
-        <div className="mx-1.5 h-5 w-px bg-slate-600 shrink-0" />
-        <span className="text-[10px] text-slate-400 shrink-0">Couleur :</span>
         <input
           type="color"
           value={fillColor}
           onChange={(e) => setFillColor(e.target.value)}
-          className="w-7 h-7 rounded cursor-pointer border border-slate-600 bg-transparent shrink-0"
+          className="w-6 h-6 rounded cursor-pointer border border-white/30 bg-transparent shrink-0"
         />
+        </div>
 
+        <div className="flex items-center gap-1 glass rounded-xl px-2 py-1 ml-2" style={{ color: "white" }}>
         {/* Actions */}
-        <div className="mx-1.5 h-5 w-px bg-slate-600 shrink-0" />
         <TBtn
           icon={<Copy size={13} />}
           label="Dupliquer"
@@ -381,15 +394,16 @@ export default function BuilderPage() {
           disabled={!selectedId}
           accent={!!selectedId}
         />
+        </div>
 
+        <div className="flex items-center gap-1 glass rounded-xl px-2 py-1 ml-2" style={{ color: "white" }}>
         {/* Zoom */}
-        <div className="mx-1.5 h-5 w-px bg-slate-600 shrink-0" />
         <TBtn
           icon={<ZoomOut size={13} />}
           label=""
           onClick={() => setZoom((z) => Math.max(25, z - 10))}
         />
-        <span className="text-[11px] text-slate-300 w-11 text-center tabular-nums shrink-0">
+        <span className="text-[11px] text-white/80 w-10 text-center tabular-nums shrink-0">
           {zoom}%
         </span>
         <TBtn
@@ -397,57 +411,62 @@ export default function BuilderPage() {
           label=""
           onClick={() => setZoom((z) => Math.min(300, z + 10))}
         />
+        </div>
 
         {/* Reset */}
         <div className="ml-auto" />
         <button
           onClick={resetBoard}
-          className="text-[10px] px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium transition-colors shrink-0"
+          className="text-[10px] px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg font-medium transition-colors backdrop-blur shrink-0"
         >
           Réinitialiser
         </button>
       </div>
 
       {/* ────── Main area ────── */}
-      <div className="flex flex-1 min-h-0">
+      <div className="relative z-10 flex flex-1 min-h-0 px-4 pb-4 gap-3 mt-2">
         {/* Sidebar */}
-        <div className="w-52 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0 overflow-y-auto">
+        <div className="w-52 glass rounded-2xl flex flex-col shrink-0 overflow-y-auto" style={{ color: "#1a2a3a" }}>
           {/* Stats */}
           <div className="p-4">
-            <h3 className="text-[11px] font-semibold text-blue-400 mb-3 flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold text-slate-600 mb-3 flex items-center gap-1.5">
               <BarChart3 size={12} /> Statistiques
             </h3>
             <div className="space-y-2.5">
-              <div className="bg-slate-700/60 rounded-lg px-3 py-2">
-                <p className="text-[9px] text-slate-400 uppercase tracking-wider">
+              <div className="bg-white/40 rounded-xl px-3 py-2.5 border border-white/50">
+                <p className="text-[9px] text-slate-500 uppercase tracking-wider">
                   Métrage utilisé
                 </p>
-                <p className="text-base font-bold mt-0.5">
+                <p className="text-lg font-bold text-slate-800 mt-0.5">
                   {metrageUsed.toFixed(2)} m
                 </p>
               </div>
-              <div className="bg-slate-700/60 rounded-lg px-3 py-2">
-                <p className="text-[9px] text-slate-400 uppercase tracking-wider">
+              <div className="bg-white/40 rounded-xl px-3 py-2.5 border border-white/50">
+                <p className="text-[9px] text-slate-500 uppercase tracking-wider">
                   Surface totale
                 </p>
-                <p className="text-base font-bold mt-0.5">
+                <p className="text-lg font-bold text-slate-800 mt-0.5">
                   {totalSurface.toLocaleString("fr-FR")} cm²
                 </p>
+              </div>
+              <div className="bg-white/40 rounded-xl px-3 py-2.5 border border-white/50">
+                <p className="text-[9px] text-slate-500 uppercase tracking-wider">Objets</p>
+                <p className="text-lg font-bold text-slate-800 mt-0.5">{objects.length}</p>
               </div>
             </div>
           </div>
 
           {/* Properties */}
           {selectedObj && (
-            <div className="p-4 border-t border-slate-700">
-              <h3 className="text-[11px] font-semibold text-blue-400 mb-3 flex items-center gap-1.5">
+            <div className="p-4 border-t border-white/30">
+              <h3 className="text-[11px] font-semibold text-slate-600 mb-3 flex items-center gap-1.5">
                 <Settings2 size={12} /> Propriétés
               </h3>
               <div className="space-y-2.5">
                 {selectedObj.type === "text" && (
                   <div>
-                    <label className="text-[9px] text-slate-400 uppercase tracking-wider">
-                      Texte :
+                    <label className="text-[9px] text-slate-500 uppercase tracking-wider">
+                      Texte
                     </label>
                     <input
                       type="text"
@@ -455,13 +474,13 @@ export default function BuilderPage() {
                       onChange={(e) =>
                         updateObject(selectedId!, { text: e.target.value })
                       }
-                      className="w-full mt-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-xs text-white outline-none focus:border-blue-500"
+                      className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400"
                     />
                   </div>
                 )}
                 <div>
-                  <label className="text-[9px] text-slate-400 uppercase tracking-wider">
-                    Largeur (cm) :
+                  <label className="text-[9px] text-slate-500 uppercase tracking-wider">
+                    Largeur (cm)
                   </label>
                   <input
                     type="number"
@@ -472,12 +491,12 @@ export default function BuilderPage() {
                       })
                     }
                     step={0.1}
-                    className="w-full mt-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-xs text-white outline-none focus:border-blue-500"
+                    className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-slate-400 uppercase tracking-wider">
-                    Hauteur (cm) :
+                  <label className="text-[9px] text-slate-500 uppercase tracking-wider">
+                    Hauteur (cm)
                   </label>
                   <input
                     type="number"
@@ -488,12 +507,12 @@ export default function BuilderPage() {
                       })
                     }
                     step={0.1}
-                    className="w-full mt-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-xs text-white outline-none focus:border-blue-500"
+                    className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-slate-400 uppercase tracking-wider">
-                    Rotation (°) :
+                  <label className="text-[9px] text-slate-500 uppercase tracking-wider">
+                    Rotation (°)
                   </label>
                   <input
                     type="number"
@@ -503,22 +522,22 @@ export default function BuilderPage() {
                         rotation: parseFloat(e.target.value) || 0,
                       })
                     }
-                    className="w-full mt-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-xs text-white outline-none focus:border-blue-500"
+                    className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400"
                   />
                 </div>
                 {selectedObj.type === "image" &&
                   selectedObj.naturalWidth != null && (
                     <div>
-                      <label className="text-[9px] text-slate-400 uppercase tracking-wider">
-                        DPI :
+                      <label className="text-[9px] text-slate-500 uppercase tracking-wider">
+                        DPI
                       </label>
                       <p
                         className={`text-sm font-bold mt-0.5 ${
                           getDPI(selectedObj) >= 300
-                            ? "text-green-400"
+                            ? "text-green-600"
                             : getDPI(selectedObj) >= 150
-                            ? "text-yellow-400"
-                            : "text-red-400"
+                            ? "text-yellow-600"
+                            : "text-red-600"
                         }`}
                       >
                         {getDPI(selectedObj)}{" "}
@@ -528,8 +547,8 @@ export default function BuilderPage() {
                   )}
                 {selectedObj.fill !== undefined && (
                   <div>
-                    <label className="text-[9px] text-slate-400 uppercase tracking-wider">
-                      Couleur :
+                    <label className="text-[9px] text-slate-500 uppercase tracking-wider">
+                      Couleur
                     </label>
                     <input
                       type="color"
@@ -537,7 +556,7 @@ export default function BuilderPage() {
                       onChange={(e) =>
                         updateObject(selectedId!, { fill: e.target.value })
                       }
-                      className="w-full mt-1 h-8 rounded cursor-pointer border border-slate-600 bg-transparent"
+                      className="w-full mt-1 h-8 rounded-lg cursor-pointer border border-white/50 bg-transparent"
                     />
                   </div>
                 )}
@@ -547,7 +566,7 @@ export default function BuilderPage() {
         </div>
 
         {/* Canvas area */}
-        <div className="flex-1 relative min-w-0">
+        <div className="flex-1 relative min-w-0 rounded-2xl overflow-hidden shadow-2xl shadow-black/20">
           <BuilderCanvas
             ref={canvasRef}
             boardWidth={BOARD_WIDTH}
@@ -563,7 +582,7 @@ export default function BuilderPage() {
           />
 
           {/* Reduce / Extend buttons */}
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+          <div className="absolute bottom-3 right-3 flex flex-col gap-2">
             <button
               onClick={() =>
                 setBoardHeight((h) => {
@@ -574,81 +593,87 @@ export default function BuilderPage() {
                   return Math.max(Math.ceil(maxY / 25) * 25, h - 25);
                 })
               }
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-700/90 hover:bg-slate-600 border border-slate-600 rounded-lg text-xs font-medium transition-colors backdrop-blur"
+              className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl text-xs font-medium text-slate-700 transition-colors"
             >
               <ChevronUp size={14} /> Réduire
             </button>
             <button
               onClick={() => setBoardHeight((h) => h + 25)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600/90 hover:bg-blue-500 border border-blue-500 rounded-lg text-xs font-medium transition-colors backdrop-blur"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/30 hover:bg-white/40 backdrop-blur border border-white/40 rounded-xl text-xs font-medium text-white transition-colors"
             >
               <ChevronDown size={14} /> Étendre
             </button>
           </div>
         </div>
-      </div>
 
-      {/* ────── Bottom bar ────── */}
-      <div className="flex items-center justify-between px-4 h-14 bg-slate-900 border-t border-slate-700 shrink-0">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium transition-colors"
-          >
-            <ArrowLeft size={13} /> Annuler
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={objects.length === 0}
-            className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-bold transition-colors"
-          >
-            Confirmer
-          </button>
-        </div>
+        {/* Right sidebar — Price/Quantity */}
+        <div className="w-52 glass-strong rounded-2xl flex flex-col shrink-0 overflow-hidden" style={{ color: "#1a2a3a" }}>
+          <div className="p-4 flex-1">
+            <h3 className="text-[11px] font-semibold text-slate-600 mb-4 uppercase tracking-wider">Récapitulatif</h3>
 
-        <div className="flex items-center gap-6">
-          {/* Quantity */}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">
-              Quantité :
-            </span>
-            <div className="flex items-center bg-slate-800 rounded-lg border border-slate-600">
-              <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="px-2 py-1.5 hover:bg-slate-700 rounded-l-lg transition-colors"
-              >
-                <Minus size={12} />
-              </button>
-              <input
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) =>
-                  setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-                }
-                className="w-10 text-center text-xs font-bold bg-transparent border-x border-slate-600 py-1.5 outline-none text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button
-                onClick={() => setQuantity((q) => q + 1)}
-                className="px-2 py-1.5 hover:bg-slate-700 rounded-r-lg transition-colors"
-              >
-                <Plus size={12} />
-              </button>
+            {/* Quantity */}
+            <div className="mb-4">
+              <label className="text-[9px] text-slate-500 uppercase tracking-wider">Nb. planches</label>
+              <div className="flex items-center mt-1.5 bg-white/50 rounded-xl border border-white/60">
+                <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="px-2.5 py-2 hover:bg-white/40 rounded-l-xl transition-colors">
+                  <Minus size={12} className="text-slate-600" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full text-center text-sm font-bold !bg-transparent !border-x !border-white/50 !text-slate-800 py-1.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button onClick={() => setQuantity((q) => q + 1)} className="px-2.5 py-2 hover:bg-white/40 rounded-r-xl transition-colors">
+                  <Plus size={12} className="text-slate-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Utilisé</span>
+                <span className="text-slate-500">{metrageUsed.toFixed(2)} m</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Facturé/planche</span>
+                <span className="font-bold text-slate-800">{metragePerBoard} m</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Métrage total</span>
+                <span className="font-bold text-slate-800">{metrageGlobal} m</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Prix/m</span>
+                <span className="font-bold text-slate-800">{formatPrice(unitPrice)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Metrage */}
-          <div className="text-xs">
-            <span className="text-slate-400">Métrage global : </span>
-            <span className="font-bold">{metrageGlobal.toFixed(1)} m</span>
+          {/* Total */}
+          <div className="px-4 py-4 bg-slate-800/90 border-t border-slate-700">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-semibold text-white/70 uppercase tracking-wider">Total HT</span>
+              <span className="text-xl font-bold text-white">{formatPrice(totalPrice)}</span>
+            </div>
           </div>
 
-          {/* Price */}
-          <div className="text-sm">
-            <span className="text-slate-400">Prix : </span>
-            <span className="font-bold text-white text-base">
-              {formatPrice(totalPrice)}
-            </span>
+          {/* Confirm */}
+          <div className="p-3 space-y-2">
+            <button
+              onClick={handleConfirm}
+              disabled={objects.length === 0}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 font-semibold text-sm bg-slate-800 text-white rounded-full hover:bg-slate-700 transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Confirmer & commander
+            </button>
+            <button
+              onClick={() => router.back()}
+              className="w-full inline-flex items-center justify-center gap-2 py-2 px-4 font-medium text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <ArrowLeft size={13} /> Annuler
+            </button>
           </div>
         </div>
       </div>

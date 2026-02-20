@@ -77,7 +77,7 @@ export function getDPI(obj: BuilderObject): number {
 /*  AUTO-LAYOUT: intelligent bin-packing for logos on a board     */
 /* ═══════════════════════════════════════════════════════════════ */
 
-const LOGO_GAP = 0.5; // cm gap between logos
+const DEFAULT_LOGO_GAP = 0.5; // cm gap between logos
 
 /**
  * Pack logos onto a board of fixed width.
@@ -87,14 +87,15 @@ const LOGO_GAP = 0.5; // cm gap between logos
 export function autoLayoutLogos(
   logos: LogoEntry[],
   boardWidth: number,
-  existingObjects: BuilderObject[]
+  existingObjects: BuilderObject[],
+  gap: number = DEFAULT_LOGO_GAP
 ): { objects: BuilderObject[]; newBoardHeight: number } {
   // Find current max Y from existing objects
   let startY = 0;
   for (const obj of existingObjects) {
     startY = Math.max(startY, getObjectBounds(obj).maxY);
   }
-  if (existingObjects.length > 0) startY += LOGO_GAP * 2;
+  if (existingObjects.length > 0) startY += gap * 2;
 
   // Build list of items to place: each logo × quantity
   const items: { logo: LogoEntry; index: number }[] = [];
@@ -109,8 +110,8 @@ export function autoLayoutLogos(
 
   // Shelf-based packing
   const placed: BuilderObject[] = [];
-  let curX = LOGO_GAP;
-  let curY = startY + LOGO_GAP;
+  let curX = gap;
+  let curY = startY + gap;
   let rowHeight = 0;
 
   for (const item of items) {
@@ -118,9 +119,9 @@ export function autoLayoutLogos(
     const h = item.logo.heightCm;
 
     // If this item won't fit in the current row, move to next row
-    if (curX + w + LOGO_GAP > boardWidth) {
-      curX = LOGO_GAP;
-      curY += rowHeight + LOGO_GAP;
+    if (curX + w + gap > boardWidth) {
+      curX = gap;
+      curY += rowHeight + gap;
       rowHeight = 0;
     }
 
@@ -138,11 +139,11 @@ export function autoLayoutLogos(
       logoGroupId: item.logo.id,
     });
 
-    curX += w + LOGO_GAP;
+    curX += w + gap;
     rowHeight = Math.max(rowHeight, h);
   }
 
-  const maxY = curY + rowHeight + LOGO_GAP;
+  const maxY = curY + rowHeight + gap;
   const newBoardHeight = Math.max(100, Math.ceil(maxY / 25) * 25 + 25);
 
   return { objects: placed, newBoardHeight };

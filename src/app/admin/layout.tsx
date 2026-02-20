@@ -7,6 +7,7 @@ import {
   Tag,
   Package,
   Users,
+  Settings,
   Menu,
   X,
   LogOut,
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/admin/orders", label: "Commandes", icon: Package },
   { href: "/admin/clients", label: "Clients", icon: Users },
   { href: "/admin/pricing", label: "Produits & Tarifs", icon: Tag },
+  { href: "/admin/settings", label: "Paramètres", icon: Settings },
 ];
 
 /* ──────────────────────────────────────────────────────────── */

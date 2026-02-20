@@ -1,17 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/pricing";
-import { Trash2, ShoppingBag, Lock, ArrowRight } from "lucide-react";
+import { Trash2, ShoppingBag, Lock, ArrowRight, Truck, Percent } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/animations/PageTransition";
 import { FadeIn } from "@/components/animations/FadeIn";
 
+interface ShopSettings {
+  shippingPrice: number;
+  freeShippingThreshold: number;
+  vatPercent: number;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, removeItem, totalPrice, clearCart } = useCart();
+  const [settings, setSettings] = useState<ShopSettings | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -24,6 +31,22 @@ export default function CheckoutPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((data) => setSettings(data))
+      .catch(() => {});
+  }, []);
+
+  // Computed pricing
+  const subtotalHT = totalPrice;
+  const shippingCost = settings
+    ? (settings.freeShippingThreshold > 0 && subtotalHT >= settings.freeShippingThreshold ? 0 : settings.shippingPrice)
+    : 0;
+  const totalHT = subtotalHT + shippingCost;
+  const vatAmount = settings ? parseFloat((totalHT * settings.vatPercent / 100).toFixed(2)) : 0;
+  const totalTTC = parseFloat((totalHT + vatAmount).toFixed(2));
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
@@ -169,11 +192,6 @@ export default function CheckoutPage() {
                       {item.sizeLabel} x {item.quantity}{" "}
                       {item.productType === "metre" ? "m" : "pcs"} — {item.fileName}
                     </p>
-                    {item.deliveryLabel && (
-                      <p className="text-xs text-muted mt-0.5">
-                        🚚 Livraison : {item.deliveryLabel}
-                      </p>
-                    )}
                   </div>
                   <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-auto">
                     <span className="text-sm font-bold">
@@ -191,12 +209,54 @@ export default function CheckoutPage() {
                 </motion.div>
               ))}
             </AnimatePresence>
-            <div className="px-4 sm:px-5 py-4 sm:py-5 flex justify-between bg-foreground text-white rounded-b-2xl">
-              <span className="text-xs font-semibold">Total HT</span>
-              <span className="text-xl font-bold">
-                {formatPrice(totalPrice)}
-              </span>
+            <div className="px-4 sm:px-5 py-4 sm:py-5 bg-foreground/[0.03] border-t border-border space-y-2.5">
+              {/* Sous-total HT */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted">Sous-total HT</span>
+                <span className="text-sm font-semibold">{formatPrice(subtotalHT)}</span>
+              </div>
+
+              {/* Livraison */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted flex items-center gap-1.5">
+                  <Truck size={12} /> Livraison
+                </span>
+                {shippingCost === 0 ? (
+                  <span className="text-xs font-semibold text-green-600">Offerte</span>
+                ) : (
+                  <span className="text-sm font-semibold">{formatPrice(shippingCost)}</span>
+                )}
+              </div>
+
+              {settings && settings.freeShippingThreshold > 0 && shippingCost > 0 && (
+                <p className="text-[10px] text-muted">
+                  Livraison offerte dès {formatPrice(settings.freeShippingThreshold)} HT
+                </p>
+              )}
+
+              {/* TVA */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted flex items-center gap-1.5">
+                  <Percent size={12} /> TVA ({settings?.vatPercent ?? 20}%)
+                </span>
+                <span className="text-sm font-semibold">{formatPrice(vatAmount)}</span>
+              </div>
+
+              {/* Separator */}
+              <div className="border-t border-border pt-2.5" />
+
+              {/* Total TTC */}
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-wider">Total TTC</span>
+                <span className="text-xl font-bold">{formatPrice(totalTTC)}</span>
+              </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3 mb-8 px-1">
+            <Truck size={14} className="text-muted shrink-0" />
+            <p className="text-xs text-muted">
+              3 jours ouvrés de production + 24h de livraison maximum
+            </p>
           </div>
         </FadeIn>
 

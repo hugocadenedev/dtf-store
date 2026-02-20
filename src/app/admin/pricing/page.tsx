@@ -194,7 +194,6 @@ export default function AdminPricing() {
           />
           <select value={newType} onChange={(e) => setNewType(e.target.value as "metre" | "logo")}>
             <option value="metre">Au Metre</option>
-            <option value="logo">Au Logo</option>
           </select>
           <input
             type="text"

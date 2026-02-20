@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Ruler, Image as ImageIcon, LayoutPanelTop, Sparkles } from "lucide-react";
+import { ArrowRight, Ruler, LayoutPanelTop, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { Particles } from "@/components/animations/Particles";
@@ -59,38 +59,6 @@ function PlancheMetre() {
       {/* Scissors cut line */}
       <line x1="8" y1="306" x2="272" y2="306" stroke="#94a3b8" strokeWidth="1" strokeDasharray="7 4" />
       <text x="140" y="328" fill="#94a3b8" fontSize="8" textAnchor="middle" fontFamily="sans-serif">✂ Découpe</text>
-    </svg>
-  );
-}
-
-function PlancheLogo() {
-  return (
-    <svg viewBox="0 0 280 360" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-xl">
-      <defs>
-        <filter id="paperShadowL" x="-10%" y="-5%" width="120%" height="115%">
-          <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#000" floodOpacity="0.10" />
-        </filter>
-      </defs>
-      {/* Paper background */}
-      <rect x="14" y="14" width="252" height="332" rx="14" fill="white" filter="url(#paperShadowL)" />
-      <rect x="14" y="14" width="252" height="332" rx="14" stroke="#e2e8f0" strokeWidth="1" fill="none" />
-
-      {/* Labels */}
-      <rect x="28" y="24" width="76" height="18" rx="5" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.8" />
-      <text x="66" y="37" fill="#64748b" fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">10 × 10 cm</text>
-      <rect x="172" y="24" width="60" height="18" rx="5" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.8" />
-      <text x="202" y="37" fill="#64748b" fontSize="8" fontWeight="600" textAnchor="middle" fontFamily="sans-serif">× 50 pcs</text>
-
-      {/* Grid of logos — kiss-cut placeholders */}
-      {[0, 1, 2, 3, 4].map((row) =>
-        [0, 1, 2, 3].map((col) => (
-          <g key={`${row}-${col}`} transform={`translate(${28 + col * 58}, ${52 + row * 56})`}>
-            <rect width="46" height="42" rx="8" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.8" strokeDasharray="3 2" />
-            <circle cx="16" cy="21" r="8" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="0.7" />
-            <rect x="27" y="13" width="12" height="16" rx="3" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="0.7" />
-          </g>
-        ))
-      )}
     </svg>
   );
 }
@@ -244,26 +212,6 @@ export default function HomePage() {
                       </div>
                     </motion.div>
 
-                    {/* Right — DTF au Logo */}
-                    <motion.div
-                      initial={{ y: 80, opacity: 0, rotate: 4 }}
-                      animate={{ y: 0, opacity: 1, rotate: 4 }}
-                      transition={{ delay: 0.65, duration: 0.8, ease: "easeOut" }}
-                      className="hidden sm:block w-40 md:w-48 -mb-16 relative z-[1]"
-                    >
-                      <div className="rounded-2xl bg-white shadow-lg shadow-black/10 border border-gray-100 p-3 pb-0 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-5 h-5 rounded-md bg-gray-50 border border-gray-200 flex items-center justify-center">
-                            <ImageIcon size={10} className="text-gray-400" />
-                          </div>
-                          <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Au Logo</span>
-                        </div>
-                        <div style={{ height: "200px" }}>
-                          <PlancheLogo />
-                        </div>
-                      </div>
-                    </motion.div>
-
                   </div>
                 </FadeIn>
               </div>
@@ -284,7 +232,7 @@ export default function HomePage() {
           </p>
         </FadeIn>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           <FadeIn delay={0.1}>
             <Link href="/configure/metre" className="group block">
               <motion.div
@@ -334,31 +282,6 @@ export default function HomePage() {
                 </p>
                 <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:gap-3 transition-all">
                   Ouvrir l&apos;éditeur
-                  <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-                </span>
-              </motion.div>
-            </Link>
-          </FadeIn>
-
-          <FadeIn delay={0.2}>
-            <Link href="/configure/logo" className="group block">
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.25 }}
-                className="card p-5 sm:p-8 h-full rounded-2xl"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-foreground flex items-center justify-center mb-5">
-                  <ImageIcon size={22} strokeWidth={1.5} className="text-white" />
-                </div>
-                <h3 className="text-lg font-bold tracking-tight mb-2">
-                  DTF au Logo
-                </h3>
-                <p className="text-sm text-muted leading-relaxed mb-6">
-                  Transferts découpés à la forme. Choisissez votre taille
-                  et quantité. Parfait pour la personnalisation.
-                </p>
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground group-hover:gap-3 transition-all">
-                  Configurer
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
                 </span>
               </motion.div>

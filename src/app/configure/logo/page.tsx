@@ -11,9 +11,9 @@ import { getUnitPrice, calculateTotal, formatPrice } from "@/lib/pricing";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/animations/PageTransition";
 import { FadeIn } from "@/components/animations/FadeIn";
-import { ArrowRight, ArrowLeft, ShoppingCart, Grid3X3, Hash, Info } from "lucide-react";
+import { ArrowRight, ArrowLeft, ShoppingCart, Grid3X3, Hash, Info, Truck } from "lucide-react";
 import { Particles } from "@/components/animations/Particles";
-import { DeliveryPicker } from "@/components/DeliveryPicker";
+
 
 const STEPS = ["Configuration", "Fichier", "Résumé"];
 
@@ -46,8 +46,7 @@ export default function LogoConfigurator() {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(10);
   const [file, setFile] = useState<File | null>(null);
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [deliveryLabel, setDeliveryLabel] = useState("");
+
 
   useEffect(() => {
     fetch("/api/products?type=logo")
@@ -92,8 +91,6 @@ export default function LogoConfigurator() {
       sizeLabel: selectedSize,
       file,
       fileName: file?.name ?? "",
-      deliveryDate,
-      deliveryLabel,
     });
     router.push("/checkout");
   };
@@ -268,24 +265,25 @@ export default function LogoConfigurator() {
                         </div>
                       </FadeIn>
 
-                      {/* Delivery picker */}
+                      {/* Delivery info */}
                       <FadeIn delay={0.15}>
                         <div className="glass rounded-2xl p-5 ring-1 ring-slate-200/40">
-                          <DeliveryPicker
-                            value={deliveryDate}
-                            onChange={(date, label) => {
-                              setDeliveryDate(date);
-                              setDeliveryLabel(label);
-                            }}
-                            variant="light"
-                          />
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-slate-800/10 flex items-center justify-center">
+                              <Truck size={14} className="text-slate-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">Livraison</p>
+                              <p className="text-[11px] text-slate-500">3 jours ouvrés de production + 24h de livraison max</p>
+                            </div>
+                          </div>
                         </div>
                       </FadeIn>
                     </div>
 
                     {/* Right column — sticky summary */}
                     <div className="lg:col-span-5">
-                      <div className="lg:sticky lg:top-24">
+                      <div className="lg:sticky lg:top-24 space-y-6">
                         <FadeIn delay={0.2}>
                           <div className="glass-strong rounded-2xl overflow-hidden ring-1 ring-slate-200/40 shadow-2xl shadow-black/10">
                             <div className="px-5 py-4 border-b border-slate-200/60">
@@ -308,18 +306,12 @@ export default function LogoConfigurator() {
                                 <span className="text-xs text-slate-500">Prix unitaire</span>
                                 <span className="text-sm font-bold text-slate-800">{formatPrice(unitPrice)}/pce</span>
                               </div>
-                              {deliveryLabel && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  className="flex justify-between items-center"
-                                >
-                                  <span className="text-xs text-slate-500">Livraison</span>
-                                  <span className="text-[11px] font-semibold bg-slate-800 text-white px-2.5 py-1 rounded-full">
-                                    {deliveryLabel}
-                                  </span>
-                                </motion.div>
-                              )}
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-slate-500">Livraison</span>
+                                <span className="text-[11px] font-semibold bg-slate-800 text-white px-2.5 py-1 rounded-full">
+                                  3j ouvrés + 24h
+                                </span>
+                              </div>
                             </div>
                             <div className="px-5 py-5 bg-slate-800/90 border-t border-slate-700">
                               <div className="flex justify-between items-center">
@@ -330,19 +322,27 @@ export default function LogoConfigurator() {
                             <div className="p-4">
                               <button
                                 onClick={() => setStep(1)}
-                                disabled={!deliveryDate}
-                                className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 font-semibold text-sm bg-slate-800 text-white rounded-full hover:bg-slate-700 transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 font-semibold text-sm bg-slate-800 text-white rounded-full hover:bg-slate-700 transition-all shadow-lg"
                               >
                                 Continuer <ArrowRight size={14} />
                               </button>
-                              {!deliveryDate && (
-                                <p className="text-[10px] text-center text-slate-400 mt-2">
-                                  Sélectionnez un délai de livraison pour continuer
-                                </p>
-                              )}
                             </div>
                           </div>
                         </FadeIn>
+
+                        {/* ═══ Description ═══ */}
+                        {product.description && (
+                          <FadeIn delay={0.25}>
+                            <div className="glass rounded-2xl p-5 ring-1 ring-slate-200/40">
+                              <div className="flex items-start gap-3">
+                                <Info size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                                  {product.description}
+                                </p>
+                              </div>
+                            </div>
+                          </FadeIn>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -421,7 +421,7 @@ export default function LogoConfigurator() {
                           <div className="px-5 py-3.5 flex justify-between items-center">
                             <span className="text-xs text-slate-500">Livraison</span>
                             <span className="text-[11px] font-semibold bg-slate-800 text-white px-2.5 py-1 rounded-full">
-                              {deliveryLabel || "—"}
+                              3j ouvrés + 24h
                             </span>
                           </div>
                         </div>
@@ -446,22 +446,6 @@ export default function LogoConfigurator() {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* ═══ Description ═══ */}
-            {product.description && (
-              <div className="relative z-10 px-4 sm:px-6 md:px-10 pb-8">
-                <FadeIn delay={0.3}>
-                  <div className="mx-auto max-w-xl">
-                    <div className="inline-flex items-start gap-2.5 glass rounded-2xl px-5 py-4 text-left">
-                      <Info size={14} className="text-slate-500 mt-0.5 shrink-0" />
-                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                        {product.description}
-                      </p>
-                    </div>
-                  </div>
-                </FadeIn>
-              </div>
-            )}
           </div>
         </div>
       </section>

@@ -83,13 +83,13 @@ export function Header() {
       <div className="mx-auto px-5 sm:px-8 md:px-10 h-14 sm:h-16 flex items-center justify-between relative">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span
-            className={`text-lg font-bold tracking-tight transition-colors duration-300 ${
-              showWhite ? "text-white" : "text-foreground"
+          <img
+            src="/Impresive..svg"
+            alt="Impressive"
+            className={`h-7 sm:h-8 w-auto transition-all duration-300 ${
+              showWhite ? "" : "invert"
             }`}
-          >
-            DTF Store
-          </span>
+          />
         </Link>
 
         {/* Desktop nav — centered links */}
@@ -103,16 +103,6 @@ export function Header() {
             }`}
           >
             Planches DTF au mètre
-          </Link>
-          <Link
-            href="/configure/logo"
-            className={`text-sm font-medium px-4 py-2 rounded-full transition-all duration-300 ${
-              showWhite
-                ? "bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm"
-                : "bg-foreground/5 text-foreground hover:bg-foreground/10"
-            }`}
-          >
-            Planche DTF au logo
           </Link>
         </nav>
 
@@ -203,9 +193,6 @@ export function Header() {
                                   {item.sizeLabel} × {item.quantity}{" "}
                                   {item.productType === "metre" ? "m" : "pcs"}
                                 </p>
-                                {item.deliveryLabel && (
-                                  <p className="text-[11px] text-muted mt-0.5">🚚 {item.deliveryLabel}</p>
-                                )}
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-sm font-bold text-foreground">{formatPrice(item.totalPrice)}</span>
@@ -297,9 +284,9 @@ export function Header() {
               <Link
                 href="/"
                 onClick={() => setMobileOpen(false)}
-                className="text-xl font-bold text-white tracking-tight mb-10"
+                className="mb-10 inline-block"
               >
-                DTF Store
+                <img src="/Impresive..svg" alt="Impressive" className="h-8 w-auto" />
               </Link>
 
               {/* Nav links */}
@@ -309,7 +296,6 @@ export function Header() {
                 </p>
                 {[
                   { href: "/configure/metre", label: "DTF au mètre" },
-                  { href: "/configure/logo", label: "DTF au logo" },
                   { href: "/configure/builder", label: "Builder" },
                 ].map((link, i) => (
                   <motion.div

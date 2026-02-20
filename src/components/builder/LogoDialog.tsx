@@ -18,12 +18,13 @@ import { getDPI } from "./types";
 interface LogoDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (logos: LogoEntry[]) => void;
+  onConfirm: (logos: LogoEntry[], spacing: number) => void;
   boardWidth: number;
 }
 
 export function LogoDialog({ open, onClose, onConfirm, boardWidth }: LogoDialogProps) {
   const [logos, setLogos] = useState<LogoEntry[]>([]);
+  const [spacing, setSpacing] = useState(0.5);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback(
@@ -86,12 +87,14 @@ export function LogoDialog({ open, onClose, onConfirm, boardWidth }: LogoDialogP
 
   const handleConfirm = useCallback(() => {
     if (logos.length === 0) return;
-    onConfirm(logos);
+    onConfirm(logos, spacing);
     setLogos([]);
-  }, [logos, onConfirm]);
+    setSpacing(0.5);
+  }, [logos, spacing, onConfirm]);
 
   const handleClose = useCallback(() => {
     setLogos([]);
+    setSpacing(0.5);
     onClose();
   }, [onClose]);
 
@@ -166,6 +169,32 @@ export function LogoDialog({ open, onClose, onConfirm, boardWidth }: LogoDialogP
                 }}
                 className="hidden"
               />
+
+              {/* Spacing control */}
+              {logos.length > 0 && (
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100 flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8l4 4-4 4"/><path d="M3 12h18"/><path d="M7 8L3 12l4 4"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[11px] text-blue-700 font-semibold uppercase tracking-wider">
+                      Espacement entre logos
+                    </label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="number"
+                        value={spacing}
+                        onChange={(e) => setSpacing(Math.max(0, parseFloat(e.target.value) || 0))}
+                        step={0.1}
+                        min={0}
+                        max={10}
+                        className="w-20 px-2.5 py-1.5 bg-white border border-blue-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-xs text-blue-600 font-medium">cm</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Logo list */}
               {logos.length > 0 && (

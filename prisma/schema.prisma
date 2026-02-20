@@ -66,6 +66,8 @@ model Order {
   paymentStatus   String   @default("pending") // pending | paid | failed
   orderStatus     String   @default("received") // received | preparing | shipped
   totalAmount     Float
+  shippingAmount  Float    @default(0)
+  vatAmount       Float    @default(0)
   currency        String   @default("EUR")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -76,7 +78,13 @@ model Order {
   @@index([customerId])
   @@index([customerEmail])
 }
-
+// ─── Shop Settings (singleton) ───────────────────────────────
+model ShopSettings {
+  id                    String @id @default("default")
+  shippingPrice         Float  @default(8.90)  // prix de livraison en €
+  freeShippingThreshold Float  @default(150.0) // montant HT à partir duquel la livraison est offerte
+  vatPercent            Float  @default(20.0)  // % de TVA
+}
 // ─── Order Items ─────────────────────────────────────────────────
 model OrderItem {
   id          String  @id @default(uuid())

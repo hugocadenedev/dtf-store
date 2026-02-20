@@ -1,12 +1,8 @@
 // Seed script — run with: npx tsx --tsconfig tsconfig.json prisma/seed.ts
 import "dotenv/config";
+import { prisma } from "../src/lib/prisma";
 
 async function main() {
-  // Dynamic import of the generated client
-  const mod = await import("../src/generated/prisma/client.js");
-  const PrismaClient = mod.PrismaClient;
-  const prisma = new PrismaClient();
-  
   console.log("Seeding database...");
 
   // Clean existing data
@@ -81,6 +77,20 @@ async function main() {
   });
 
   console.log("✓ Seeded: DTF au Mètre + DTF au Logo with degressive pricing tiers");
+
+  // ── Shop Settings (defaults) ────────────────────────────────
+  await prisma.shopSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      shippingPrice: 8.90,
+      freeShippingThreshold: 150,
+      vatPercent: 20,
+    },
+  });
+
+  console.log("✓ Seeded: Shop settings (shipping 8.90€, free >150€ HT, TVA 20%)");
 }
 
 main()

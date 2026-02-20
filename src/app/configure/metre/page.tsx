@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/StepIndicator";
 import { PriceTable } from "@/components/PriceTable";
@@ -12,12 +12,15 @@ import { getUnitPrice, calculateTotal, formatPrice } from "@/lib/pricing";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/animations/PageTransition";
 import { FadeIn } from "@/components/animations/FadeIn";
-import { ArrowRight, ArrowLeft, ShoppingCart, Ruler, Info, LayoutPanelTop, X } from "lucide-react";
+import { ArrowRight, ArrowLeft, ShoppingCart, Info, LayoutPanelTop, X, Upload, ImageIcon, Minus, Plus } from "lucide-react";
 import { Particles } from "@/components/animations/Particles";
-import { DeliveryPicker } from "@/components/DeliveryPicker";
+import { Truck } from "lucide-react";
 import { BuilderModal } from "@/components/builder/BuilderModal";
+import { autoLayoutLogos, getObjectBounds } from "@/components/builder/types";
+import type { LogoEntry } from "@/components/builder/types";
+import { generateBoardPdf } from "@/lib/pdfExport";
 
-const STEPS = ["Configuration", "Fichier", "Résumé"];
+const STEPS = ["Configuration", "Récapitulatif"];
 
 const stepVariants = {
   enter: { opacity: 0, x: 30 },
@@ -36,10 +39,18 @@ export default function MetreConfigurator() {
   const [step, setStep] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [file, setFile] = useState<File | null>(null);
-  const [deliveryDate, setDeliveryDate] = useState("");
-  const [deliveryLabel, setDeliveryLabel] = useState("");
+
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderFile, setBuilderFile] = useState<{ file: File; metrage: number } | null>(null);
+
+  /* ─── Quick config state ─── */
+  const [quickLogo, setQuickLogo] = useState<{ src: string; naturalWidth: number; naturalHeight: number; fileName: string } | null>(null);
+  const [quickWidth, setQuickWidth] = useState(8);
+  const [quickHeight, setQuickHeight] = useState(8);
+  const [quickQuantity, setQuickQuantity] = useState(1);
+  const [quickSpacing, setQuickSpacing] = useState(0.5);
+  const [quickGenerating, setQuickGenerating] = useState(false);
+  const quickFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/products?type=metre")
@@ -63,7 +74,88 @@ export default function MetreConfigurator() {
       .catch(() => setLoading(false));
   }, []);
 
-  const effectiveQuantity = builderFile ? builderFile.metrage : quantity;
+  /* ─── Quick config: compute layout + metrage ─── */
+  const quickLayout = useMemo(() => {
+    if (!quickLogo) return null;
+    const logoEntry: LogoEntry = {
+      id: "quick",
+      src: quickLogo.src,
+      naturalWidth: quickLogo.naturalWidth,
+      naturalHeight: quickLogo.naturalHeight,
+      fileName: quickLogo.fileName,
+      widthCm: quickWidth,
+      heightCm: quickHeight,
+      quantity: quickQuantity,
+    };
+    const result = autoLayoutLogos([logoEntry], 55, [], quickSpacing);
+    let maxY = 0;
+    for (const obj of result.objects) {
+      maxY = Math.max(maxY, getObjectBounds(obj).maxY);
+    }
+    const metrageUsed = Math.ceil(maxY) / 100;
+    const metrage = Math.max(1, Math.ceil(metrageUsed));
+    return { ...result, metrageUsed, metrage };
+  }, [quickLogo, quickWidth, quickHeight, quickQuantity, quickSpacing]);
+
+  const handleQuickWidthChange = useCallback((w: number) => {
+    setQuickWidth(w);
+    if (quickLogo) {
+      const aspect = quickLogo.naturalWidth / quickLogo.naturalHeight;
+      setQuickHeight(parseFloat((w / aspect).toFixed(1)));
+    }
+  }, [quickLogo]);
+
+  const handleQuickHeightChange = useCallback((h: number) => {
+    setQuickHeight(h);
+    if (quickLogo) {
+      const aspect = quickLogo.naturalWidth / quickLogo.naturalHeight;
+      setQuickWidth(parseFloat((h * aspect).toFixed(1)));
+    }
+  }, [quickLogo]);
+
+  const handleQuickFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        setQuickLogo({
+          src: dataUrl,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+          fileName: f.name,
+        });
+        setBuilderFile(null);
+        const aspect = img.naturalWidth / img.naturalHeight;
+        const w = Math.min(8, 59);
+        const h = parseFloat((w / aspect).toFixed(1));
+        setQuickWidth(w);
+        setQuickHeight(h);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(f);
+    e.target.value = "";
+  }, []);
+
+  const handleQuickContinue = useCallback(async () => {
+    if (!quickLayout) return;
+    setQuickGenerating(true);
+    try {
+      const pdfBytes = await generateBoardPdf(quickLayout.objects, 55, quickLayout.newBoardHeight);
+      const pdfFile = new File([pdfBytes.buffer as ArrayBuffer], "planche-dtf.pdf", { type: "application/pdf" });
+      setBuilderFile({ file: pdfFile, metrage: quickLayout.metrage });
+      setStep(1);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setQuickGenerating(false);
+    }
+  }, [quickLayout]);
+
+  const effectiveQuantity = builderFile ? builderFile.metrage : (quickLayout ? quickLayout.metrage : quantity);
   const unitPrice = getUnitPrice(tiers, effectiveQuantity);
   const total = calculateTotal(tiers, effectiveQuantity);
 
@@ -76,11 +168,9 @@ export default function MetreConfigurator() {
       quantity: effectiveQuantity,
       unitPrice,
       totalPrice: total,
-      sizeLabel: builderFile ? `${effectiveQuantity}m (planche)` : `${quantity}m`,
+      sizeLabel: builderFile ? `${effectiveQuantity}m (planche)` : `${effectiveQuantity}m`,
       file: builderFile ? builderFile.file : file,
       fileName: builderFile ? "planche-dtf.pdf" : (file?.name ?? ""),
-      deliveryDate,
-      deliveryLabel,
     });
     router.push("/checkout");
   };
@@ -207,32 +297,137 @@ export default function MetreConfigurator() {
                       {!builderFile && (
                         <div className="flex items-center gap-3 px-2">
                           <div className="flex-1 h-px bg-white/30" />
-                          <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">ou choisir le métrage manuellement</span>
+                          <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">ou configurer rapidement</span>
                           <div className="flex-1 h-px bg-white/30" />
                         </div>
                       )}
 
-                      {/* Quantity — hidden if builder has a file */}
+                      {/* Quick Logo Config — hidden if builder has a file */}
                       {!builderFile && (
                         <FadeIn>
                           <div className="glass rounded-2xl p-5">
-                            <div className="flex items-center gap-3 mb-3">
+                            <div className="flex items-center gap-3 mb-4">
                               <div className="w-8 h-8 rounded-xl bg-slate-800/10 flex items-center justify-center">
-                                <Ruler size={14} className="text-slate-600" />
+                                <ImageIcon size={14} className="text-slate-600" />
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-slate-800">Longueur souhaitée</p>
-                                <p className="text-[11px] text-slate-500">En mètres linéaires</p>
+                                <p className="text-sm font-bold text-slate-800">Configuration rapide</p>
+                                <p className="text-[11px] text-slate-500">Déposez un logo, on génère la planche pour vous</p>
                               </div>
                             </div>
-                            <input
-                              type="number"
-                              min={0.5}
-                              step={0.5}
-                              value={quantity}
-                              onChange={(e) => setQuantity(Math.max(0.5, parseFloat(e.target.value) || 0.5))}
-                              className="text-lg font-bold text-center !bg-white/40 !border-slate-300/50 !text-slate-800 placeholder:text-slate-400 focus:!border-slate-400"
-                            />
+
+                            {/* Upload zone or preview */}
+                            {!quickLogo ? (
+                              <button
+                                onClick={() => quickFileRef.current?.click()}
+                                className="w-full border-2 border-dashed border-slate-300/60 hover:border-slate-400 rounded-xl p-5 flex flex-col items-center gap-2 transition-colors group"
+                              >
+                                <div className="w-10 h-10 rounded-xl bg-slate-100/60 group-hover:bg-slate-200/60 flex items-center justify-center transition-colors">
+                                  <Upload size={18} className="text-slate-500" />
+                                </div>
+                                <span className="text-xs font-medium text-slate-600">Cliquez pour déposer votre logo</span>
+                                <span className="text-[10px] text-slate-400">PNG, JPG, SVG</span>
+                              </button>
+                            ) : (
+                              <div className="bg-white/40 rounded-xl p-3 border border-white/50">
+                                <div className="flex gap-3">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <div className="w-16 h-16 rounded-lg bg-white border border-slate-200/60 flex items-center justify-center overflow-hidden shrink-0">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={quickLogo.src} alt="" className="max-w-full max-h-full object-contain" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between">
+                                      <p className="text-xs font-semibold text-slate-800 truncate">{quickLogo.fileName}</p>
+                                      <button onClick={() => { setQuickLogo(null); }} className="text-slate-400 hover:text-red-500 transition-colors ml-2">
+                                        <X size={14} />
+                                      </button>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">{quickLogo.naturalWidth} × {quickLogo.naturalHeight} px</p>
+                                    {(() => {
+                                      const dpi = Math.round(Math.min(
+                                        (quickLogo.naturalWidth * 2.54) / quickWidth,
+                                        (quickLogo.naturalHeight * 2.54) / quickHeight
+                                      ));
+                                      return (
+                                        <p className={`text-[10px] font-semibold mt-1 ${dpi >= 300 ? "text-green-600" : dpi >= 150 ? "text-yellow-600" : "text-red-500"}`}>
+                                          {dpi} DPI {dpi >= 300 ? "✓" : "⚠️"}
+                                        </p>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+
+                                {/* Controls */}
+                                <div className="grid grid-cols-2 gap-3 mt-3">
+                                  <div>
+                                    <label className="text-[9px] text-slate-500 uppercase tracking-wider font-medium">Largeur (cm)</label>
+                                    <input
+                                      type="number"
+                                      value={quickWidth}
+                                      onChange={(e) => handleQuickWidthChange(Math.max(0.5, parseFloat(e.target.value) || 0.5))}
+                                      step={0.5}
+                                      min={0.5}
+                                      max={59}
+                                      className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] text-slate-500 uppercase tracking-wider font-medium">Hauteur (cm)</label>
+                                    <input
+                                      type="number"
+                                      value={quickHeight}
+                                      onChange={(e) => handleQuickHeightChange(Math.max(0.5, parseFloat(e.target.value) || 0.5))}
+                                      step={0.5}
+                                      min={0.5}
+                                      className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] text-slate-500 uppercase tracking-wider font-medium">Quantité</label>
+                                    <div className="flex items-center mt-1 bg-white/50 border border-white/60 rounded-lg">
+                                      <button onClick={() => setQuickQuantity((q) => Math.max(1, q - 1))} className="px-2 py-1.5 hover:bg-white/40 rounded-l-lg transition-colors">
+                                        <Minus size={11} className="text-slate-600" />
+                                      </button>
+                                      <input
+                                        type="number"
+                                        value={quickQuantity}
+                                        onChange={(e) => setQuickQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        min={1}
+                                        className="w-full text-center text-xs font-bold !bg-transparent !border-x !border-white/50 !text-slate-800 py-1.5 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      />
+                                      <button onClick={() => setQuickQuantity((q) => q + 1)} className="px-2 py-1.5 hover:bg-white/40 rounded-r-lg transition-colors">
+                                        <Plus size={11} className="text-slate-600" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="text-[9px] text-slate-500 uppercase tracking-wider font-medium">Espacement (cm)</label>
+                                    <input
+                                      type="number"
+                                      value={quickSpacing}
+                                      onChange={(e) => setQuickSpacing(Math.max(0, parseFloat(e.target.value) || 0))}
+                                      step={0.1}
+                                      min={0}
+                                      max={10}
+                                      className="w-full mt-1 px-2 py-1.5 !bg-white/50 !border-white/60 !text-slate-800 rounded-lg text-xs outline-none focus:!border-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Calculated metrage */}
+                                {quickLayout && (
+                                  <div className="mt-3 bg-slate-800/10 rounded-xl px-3 py-2.5">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] text-slate-500 uppercase tracking-wider">Longueur calculée</span>
+                                      <span className="text-sm font-bold text-slate-800">{quickLayout.metrage}m</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <input ref={quickFileRef} type="file" accept="image/*" onChange={handleQuickFileUpload} className="hidden" />
                           </div>
                         </FadeIn>
                       )}
@@ -252,7 +447,7 @@ export default function MetreConfigurator() {
                             </thead>
                             <tbody>
                               {[...tiers].sort((a, b) => a.minQty - b.minQty).map((tier) => {
-                                const isActive = quantity >= tier.minQty && quantity <= tier.maxQty;
+                                const isActive = effectiveQuantity >= tier.minQty && effectiveQuantity <= tier.maxQty;
                                 return (
                                   <tr
                                     key={tier.id}
@@ -276,24 +471,25 @@ export default function MetreConfigurator() {
                         </div>
                       </FadeIn>
 
-                      {/* Delivery picker */}
+                      {/* Delivery info */}
                       <FadeIn delay={0.1}>
                         <div className="glass rounded-2xl p-5 ring-1 ring-slate-200/40">
-                          <DeliveryPicker
-                            value={deliveryDate}
-                            onChange={(date, label) => {
-                              setDeliveryDate(date);
-                              setDeliveryLabel(label);
-                            }}
-                            variant="light"
-                          />
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-slate-800/10 flex items-center justify-center">
+                              <Truck size={14} className="text-slate-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">Livraison</p>
+                              <p className="text-[11px] text-slate-500">3 jours ouvrés de production + 24h de livraison max</p>
+                            </div>
+                          </div>
                         </div>
                       </FadeIn>
                     </div>
 
                     {/* Right column — sticky summary */}
                     <div className="lg:col-span-5">
-                      <div className="lg:sticky lg:top-24">
+                      <div className="lg:sticky lg:top-24 space-y-6">
                         <FadeIn delay={0.15}>
                           <div className="glass-strong rounded-2xl overflow-hidden ring-1 ring-slate-200/40 shadow-2xl shadow-black/10">
                             <div className="px-5 py-4 border-b border-slate-200/60">
@@ -324,18 +520,12 @@ export default function MetreConfigurator() {
                                 <span className="text-xs text-slate-500">Prix unitaire</span>
                                 <span className="text-sm font-bold text-slate-800">{formatPrice(unitPrice)}/m</span>
                               </div>
-                              {deliveryLabel && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  className="flex justify-between items-center"
-                                >
-                                  <span className="text-xs text-slate-500">Livraison</span>
-                                  <span className="text-[11px] font-semibold bg-slate-800 text-white px-2.5 py-1 rounded-full">
-                                    {deliveryLabel}
-                                  </span>
-                                </motion.div>
-                              )}
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-slate-500">Livraison</span>
+                                <span className="text-[11px] font-semibold bg-slate-800 text-white px-2.5 py-1 rounded-full">
+                                  3j ouvrés + 24h
+                                </span>
+                              </div>
                             </div>
                             <div className="px-5 py-5 bg-slate-800/90 border-t border-slate-700">
                               <div className="flex justify-between items-center">
@@ -345,60 +535,47 @@ export default function MetreConfigurator() {
                             </div>
                             <div className="p-4">
                               <button
-                                onClick={() => setStep(builderFile ? 2 : 1)}
-                                disabled={!deliveryDate}
+                                onClick={() => {
+                                  if (builderFile) {
+                                    setStep(1);
+                                  } else if (quickLayout) {
+                                    handleQuickContinue();
+                                  }
+                                }}
+                                disabled={(!builderFile && !quickLayout) || quickGenerating}
                                 className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 font-semibold text-sm bg-slate-800 text-white rounded-full hover:bg-slate-700 transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
                               >
-                                {builderFile ? "Vérifier & commander" : "Continuer"} <ArrowRight size={14} />
+                                {quickGenerating ? "Génération…" : builderFile ? "Vérifier & commander" : quickLayout ? "Générer la planche & commander" : "Continuer"} <ArrowRight size={14} />
                               </button>
-                              {!deliveryDate && (
+                              {!builderFile && !quickLayout && (
                                 <p className="text-[10px] text-center text-slate-400 mt-2">
-                                  Sélectionnez un délai de livraison pour continuer
+                                  Créez une planche ou configurez un logo pour continuer
                                 </p>
                               )}
                             </div>
                           </div>
                         </FadeIn>
+
+                        {/* ═══ Description ═══ */}
+                        {product.description && (
+                          <FadeIn delay={0.2}>
+                            <div className="glass rounded-2xl p-5 ring-1 ring-slate-200/40">
+                              <div className="flex items-start gap-3">
+                                <Info size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                                  {product.description}
+                                </p>
+                              </div>
+                            </div>
+                          </FadeIn>
+                        )}
                       </div>
                     </div>
                   </motion.div>
                 )}
 
-                {/* ────── Step 1: Upload ────── */}
+                {/* ────── Step 1: Summary ────── */}
                 {step === 1 && (
-                  <motion.div
-                    key="step1"
-                    variants={stepVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ duration: 0.3 }}
-                    className="max-w-md mx-auto"
-                  >
-                    <FadeIn>
-                      <label className="block text-xs font-semibold text-white mb-3">
-                        Votre fichier d&apos;impression
-                      </label>
-                      <FileUploader onFileSelected={(f) => setFile(f)} variant="glass" />
-
-                      <div className="flex gap-3 mt-8">
-                        <button onClick={() => setStep(0)} className="btn-secondary flex-1 !bg-white/10 !border-white/20 !text-white hover:!bg-white/20">
-                          <ArrowLeft size={14} /> Retour
-                        </button>
-                        <button
-                          onClick={() => setStep(2)}
-                          disabled={!file}
-                          className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-6 font-semibold text-sm bg-white text-foreground rounded-full hover:bg-white/90 transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          Continuer <ArrowRight size={14} />
-                        </button>
-                      </div>
-                    </FadeIn>
-                  </motion.div>
-                )}
-
-                {/* ────── Step 2: Summary ────── */}
-                {step === 2 && (
                   <motion.div
                     key="step2"
                     variants={stepVariants}
@@ -436,12 +613,12 @@ export default function MetreConfigurator() {
                           </div>
                           <div className="px-5 py-3.5 flex justify-between">
                             <span className="text-xs text-slate-500">Fichier</span>
-                            <span className="text-sm font-bold text-slate-800 truncate ml-4">{builderFile ? "planche-dtf.pdf" : (file?.name ?? "—")}</span>
+                            <span className="text-sm font-bold text-slate-800 truncate ml-4">planche-dtf.pdf</span>
                           </div>
                           <div className="px-5 py-3.5 flex justify-between items-center">
                             <span className="text-xs text-slate-500">Livraison</span>
                             <span className="text-[11px] font-semibold bg-slate-800 text-white px-2.5 py-1 rounded-full">
-                              {deliveryLabel || "—"}
+                              3j ouvrés + 24h
                             </span>
                           </div>
                         </div>
@@ -454,7 +631,7 @@ export default function MetreConfigurator() {
                       </div>
 
                       <div className="flex gap-3 mt-8">
-                        <button onClick={() => setStep(builderFile ? 0 : 1)} className="btn-secondary flex-1 !bg-white/10 !border-white/20 !text-white hover:!bg-white/20">
+                        <button onClick={() => setStep(0)} className="btn-secondary flex-1 !bg-white/10 !border-white/20 !text-white hover:!bg-white/20">
                           <ArrowLeft size={14} /> Retour
                         </button>
                         <button onClick={handleAddToCart} className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-6 font-semibold text-sm bg-white text-foreground rounded-full hover:bg-white/90 transition-all shadow-lg">
@@ -466,22 +643,6 @@ export default function MetreConfigurator() {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* ═══ Description ═══ */}
-            {product.description && (
-              <div className="relative z-10 px-4 sm:px-6 md:px-10 pb-8">
-                <FadeIn delay={0.3}>
-                  <div className="mx-auto max-w-xl">
-                    <div className="inline-flex items-start gap-2.5 glass rounded-2xl px-5 py-4 text-left">
-                      <Info size={14} className="text-slate-500 mt-0.5 shrink-0" />
-                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                        {product.description}
-                      </p>
-                    </div>
-                  </div>
-                </FadeIn>
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -493,6 +654,7 @@ export default function MetreConfigurator() {
         onClose={() => setBuilderOpen(false)}
         onConfirm={(file, metrage) => {
           setBuilderFile({ file, metrage });
+          setQuickLogo(null);
           setBuilderOpen(false);
         }}
       />
