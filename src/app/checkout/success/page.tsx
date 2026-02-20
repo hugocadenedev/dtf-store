@@ -1,12 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <section className="bg-white -mt-[3.75rem] sm:-mt-[4.25rem]">
+        <div className="p-4 sm:p-5 md:p-8 pt-7 sm:pt-8">
+          <div className="hero-gradient relative w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] px-4 sm:px-6 md:px-10 pt-20 sm:pt-24 pb-12 sm:pb-16 text-center">
+            <Loader2 size={40} className="text-white/80 animate-spin mx-auto mb-6" />
+            <p className="text-sm text-white/70">Chargement…</p>
+          </div>
+        </div>
+      </section>
+    }>
+      <SuccessContent />
+    </Suspense>
+  );
+}
+
+function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState<"loading" | "confirmed" | "error">("loading");
