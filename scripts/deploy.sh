@@ -7,6 +7,10 @@ set -e
 
 echo "🚀 DTF Store — Deploying..."
 
+# ─── 0. Backup database before anything else ─────────────────────
+echo "💾 Backing up database..."
+bash "$(dirname "$0")/backup.sh" || echo "⚠️  Backup skipped (no existing DB)"
+
 # ─── 1. Pull latest code ─────────────────────────────────────────
 echo "📥 Pulling latest code..."
 git pull origin dev
