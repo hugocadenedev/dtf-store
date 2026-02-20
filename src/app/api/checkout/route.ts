@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCustomer } from "@/lib/auth";
 import { getUnitPrice, type PriceTier } from "@/lib/pricing";
-// import { stripe } from "@/lib/stripe"; // ← Stripe temporairement désactivé
+import { getStripe } from "@/lib/stripe";
 
 interface CheckoutItem {
   productId: string;
@@ -94,13 +94,73 @@ export async function POST(req: NextRequest) {
     const vatAmount = parseFloat((totalHT * shopSettings.vatPercent / 100).toFixed(2));
     const totalTTC = parseFloat((totalHT + vatAmount).toFixed(2));
 
-    // ═══ MODE TEST : pas de Stripe, commande directement validée ═══
-    const testSessionId = `test_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    // ═══ Create Stripe Checkout Session ═══
+    const stripe = getStripe();
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    // Build Stripe line items
+    const lineItems: Array<{
+      price_data: { currency: string; product_data: { name: string; description?: string }; unit_amount: number };
+      quantity: number;
+    }> = [];
+
+    for (const item of verifiedItems) {
+      const product = productMap.get(item.productId);
+      const isDecimal = item.quantity !== Math.floor(item.quantity);
+
+      lineItems.push({
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: product?.name || "Transfert DTF",
+            ...(item.sizeLabel ? { description: `Format: ${item.sizeLabel}` } : {}),
+          },
+          // For decimal quantities (metre): charge total as 1 unit
+          unit_amount: isDecimal
+            ? Math.round(item.totalPrice * 100)
+            : Math.round(item.unitPrice * 100),
+        },
+        quantity: isDecimal ? 1 : Math.round(item.quantity),
+      });
+    }
+
+    // Shipping
+    if (shippingAmount > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "eur",
+          product_data: { name: "Frais de livraison" },
+          unit_amount: Math.round(shippingAmount * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    // VAT
+    if (vatAmount > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "eur",
+          product_data: { name: `TVA (${shopSettings.vatPercent}%)` },
+          unit_amount: Math.round(vatAmount * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: customerEmail,
+      line_items: lineItems,
+      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/checkout/cancel`,
+    });
 
     // Check if a customer is logged in
     const customer = await getCurrentCustomer();
 
-    // Create order in DB as "paid" directly
+    // Create order in DB with pending payment status
     const order = await prisma.order.create({
       data: {
         customerEmail,
@@ -113,8 +173,8 @@ export async function POST(req: NextRequest) {
         customerPostalCode,
         customerCity,
         customerId: customer?.id ?? null,
-        stripeSessionId: testSessionId,
-        paymentStatus: "paid",
+        stripeSessionId: session.id,
+        paymentStatus: "pending",
         orderStatus: "received",
         totalAmount: totalTTC,
         shippingAmount,
@@ -133,11 +193,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[TEST MODE] Order created: ${order.id} — ${testSessionId}`);
+    console.log(`Order created: ${order.id} — Stripe session: ${session.id}`);
 
-    // Return success URL directly instead of Stripe checkout URL
-    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/checkout/success?session_id=${testSessionId}`;
-    return NextResponse.json({ url: successUrl });
+    return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Checkout error:", error);
     return NextResponse.json(

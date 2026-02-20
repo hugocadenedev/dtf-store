@@ -1,7 +1,7 @@
 export type ProductType = "metre" | "logo";
 
 export type PaymentStatus = "pending" | "paid" | "failed";
-export type OrderStatus = "received" | "preparing" | "shipped";
+export type OrderStatus = "received" | "producing" | "delivered";
 
 export interface Product {
   id: string;

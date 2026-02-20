@@ -133,6 +133,16 @@ export default function HomePage() {
                   <br />
                   l&apos;impression DTF
                 </h1>
+                <div className="mt-3 sm:mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+                  <svg viewBox="0 0 36 24" className="w-6 h-4 rounded-[3px] shadow-sm overflow-hidden shrink-0" aria-hidden="true">
+                    <rect width="12" height="24" fill="#002395" />
+                    <rect x="12" width="12" height="24" fill="#FFFFFF" />
+                    <rect x="24" width="12" height="24" fill="#ED2939" />
+                  </svg>
+                  <span className="text-white/90 text-xs sm:text-sm font-semibold tracking-wide uppercase">
+                    Français
+                  </span>
+                </div>
               </FadeIn>
 
               <FadeIn delay={0.25}>
@@ -287,32 +297,6 @@ export default function HomePage() {
               </motion.div>
             </Link>
           </FadeIn>
-        </div>
-      </section>
-
-      {/* ===== STATS ===== */}
-      <section className="border-t border-border bg-white/50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            <FadeIn delay={0.1}>
-              <div>
-                <p className="text-3xl font-bold tracking-tight mb-1">48 h</p>
-                <p className="text-sm text-muted">Délai de production</p>
-              </div>
-            </FadeIn>
-            <FadeIn delay={0.2}>
-              <div>
-                <p className="text-3xl font-bold tracking-tight mb-1">300 dpi</p>
-                <p className="text-sm text-muted">Résolution d&apos;impression</p>
-              </div>
-            </FadeIn>
-            <FadeIn delay={0.3}>
-              <div>
-                <p className="text-3xl font-bold tracking-tight mb-1">-40 %</p>
-                <p className="text-sm text-muted">Jusqu&apos;à -40 % en volume</p>
-              </div>
-            </FadeIn>
-          </div>
         </div>
       </section>
 

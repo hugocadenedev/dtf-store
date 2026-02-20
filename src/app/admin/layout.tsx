@@ -113,6 +113,13 @@ export default function AdminLayout({
   // Skip auth gate for setup page
   const isSetupPage = pathname === "/admin/setup";
 
+  // Redirect to setup when no admin exists (must be in useEffect, not during render)
+  useEffect(() => {
+    if (authState === "no-admin") {
+      router.replace("/admin/setup");
+    }
+  }, [authState, router]);
+
   const checkAuth = useCallback(async () => {
     if (isSetupPage) {
       setAuthState("ok");
@@ -176,9 +183,8 @@ export default function AdminLayout({
     );
   }
 
-  // No admin exists → redirect to setup
+  // No admin exists → redirect handled by useEffect above
   if (authState === "no-admin") {
-    router.replace("/admin/setup");
     return null;
   }
 

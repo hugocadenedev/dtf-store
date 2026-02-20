@@ -66,8 +66,8 @@ function formatDateFull(date: string) {
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof Clock; cls: string }> = {
   received: { label: "Reçue", icon: Clock, cls: "bg-blue-50 text-blue-600" },
-  preparing: { label: "En préparation", icon: Package, cls: "bg-amber-50 text-amber-600" },
-  shipped: { label: "Expédiée", icon: Truck, cls: "bg-emerald-50 text-emerald-600" },
+  producing: { label: "En production", icon: Package, cls: "bg-amber-50 text-amber-600" },
+  delivered: { label: "Livrée", icon: Truck, cls: "bg-emerald-50 text-emerald-600" },
 };
 
 const PAYMENT_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -288,7 +288,7 @@ export default function AdminDashboard() {
         >
           <h2 className="text-sm font-bold mb-4">Statut des commandes</h2>
           <div className="space-y-3">
-            {(["received", "preparing", "shipped"] as const).map((status) => {
+            {(["received", "producing", "delivered"] as const).map((status) => {
               const count = stats.statusCounts[status] || 0;
               const total = stats.totalOrders || 1;
               const pct = Math.round((count / total) * 100);

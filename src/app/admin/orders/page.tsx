@@ -25,8 +25,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string; color: string }[] = [
   { value: "received", label: "Reçue", color: "bg-blue-50 text-blue-600" },
-  { value: "preparing", label: "En préparation", color: "bg-amber-50 text-amber-600" },
-  { value: "shipped", label: "Expédiée", color: "bg-emerald-50 text-emerald-600" },
+  { value: "producing", label: "En production", color: "bg-amber-50 text-amber-600" },
+  { value: "delivered", label: "Livrée", color: "bg-emerald-50 text-emerald-600" },
 ];
 
 const PAYMENT_LABELS: Record<string, { label: string; cls: string }> = {
@@ -376,8 +376,8 @@ export default function AdminOrders() {
         >
           <option value="all">Statut: Toutes ({orders.length})</option>
           <option value="received">Reçues ({orders.filter((o) => o.orderStatus === "received").length})</option>
-          <option value="preparing">En préparation ({orders.filter((o) => o.orderStatus === "preparing").length})</option>
-          <option value="shipped">Expédiées ({orders.filter((o) => o.orderStatus === "shipped").length})</option>
+          <option value="producing">En production ({orders.filter((o) => o.orderStatus === "producing").length})</option>
+          <option value="delivered">Livrées ({orders.filter((o) => o.orderStatus === "delivered").length})</option>
         </select>
         <select
           value={paymentFilter}

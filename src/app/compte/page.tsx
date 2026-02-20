@@ -10,7 +10,6 @@ import {
   User,
   Calendar,
   ChevronRight,
-  Download,
   Ruler,
   FileText,
   X,
@@ -24,8 +23,8 @@ import type { Order } from "@/lib/types";
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   received: { label: "Reçue", color: "bg-blue-100 text-blue-700" },
-  preparing: { label: "En préparation", color: "bg-amber-100 text-amber-700" },
-  shipped: { label: "Expédiée", color: "bg-emerald-100 text-emerald-700" },
+  producing: { label: "En production", color: "bg-amber-100 text-amber-700" },
+  delivered: { label: "Livrée", color: "bg-emerald-100 text-emerald-700" },
 };
 
 const PAYMENT_MAP: Record<string, { label: string; color: string }> = {
@@ -167,18 +166,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                         </div>
                       )}
                     </div>
-                    {item.filePath && (
-                      <a
-                        href={`/api${item.filePath}`}
-                        download={item.fileName || true}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 px-4 py-2 bg-foreground text-white hover:bg-foreground/90 rounded-xl text-xs font-semibold transition-colors shrink-0 shadow-sm"
-                      >
-                        <Download size={13} /> Télécharger
-                      </a>
-                    )}
+
                   </div>
                 </div>
               ))}
@@ -293,7 +281,7 @@ export default function ComptePage() {
           </div>
           <div className="glass rounded-2xl p-5 text-center">
             <p className="text-2xl font-bold">
-              {orders.filter((o) => o.orderStatus !== "shipped").length}
+              {orders.filter((o) => o.orderStatus !== "delivered").length}
             </p>
             <p className="text-xs text-muted mt-1 font-medium">En cours</p>
           </div>
@@ -378,21 +366,6 @@ export default function ComptePage() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      {/* Quick download for first file */}
-                      {order.items.some((it) => it.filePath) && (
-                        <a
-                          href={`/api${order.items.find((it) => it.filePath)!.filePath}`}
-                          download={order.items.find((it) => it.filePath)?.fileName || true}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-foreground/5 hover:bg-foreground text-foreground/70 hover:text-white rounded-xl text-[11px] font-semibold transition-all shrink-0"
-                          title="Télécharger la planche"
-                        >
-                          <Download size={13} />
-                          <span className="hidden sm:inline">Planche</span>
-                        </a>
-                      )}
                       <span className="text-sm font-bold">{formatCurrency(order.totalAmount)}</span>
                       <ChevronRight size={16} className="text-muted group-hover:text-foreground transition-colors" />
                     </div>

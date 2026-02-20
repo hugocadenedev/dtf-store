@@ -284,6 +284,105 @@ export default function LogoConfigurator() {
                     {/* Right column — sticky summary */}
                     <div className="lg:col-span-5">
                       <div className="lg:sticky lg:top-24 space-y-6">
+                        {/* ═══ Fiche technique DTF ═══ */}
+                        <FadeIn delay={0.1}>
+                          <div className="glass rounded-2xl ring-1 ring-slate-200/40 overflow-hidden">
+                            <div className="px-5 py-3.5 border-b border-slate-200/60 bg-slate-50/50">
+                              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Fiche technique</p>
+                            </div>
+                            <div className="divide-y divide-slate-100">
+                              {/* Applications */}
+                              <div className="px-5 py-3.5">
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Applications</p>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                  Textiles clairs et foncés : coton, polyester-coton, viscose, vêtements légers, extérieur, accessoires et fibres naturelles.
+                                </p>
+                              </div>
+                              {/* Impression */}
+                              <div className="px-5 py-3.5">
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Impression</p>
+                                <p className="text-xs text-slate-600">Quadri · Quadri+Blanc · Blanc</p>
+                              </div>
+                              {/* Entretien */}
+                              <div className="px-5 py-3.5">
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Entretien</p>
+                                <div className="flex items-center gap-3 text-slate-500">
+                                  <svg viewBox="0 0 28 28" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <rect x="2" y="6" width="24" height="18" rx="2" />
+                                    <path d="M6 14c2-4 4-4 6 0s4 4 6 0" />
+                                    <text x="14" y="5" textAnchor="middle" fill="currentColor" stroke="none" fontSize="7" fontWeight="600">90°</text>
+                                  </svg>
+                                  <svg viewBox="0 0 28 28" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <polygon points="14,4 26,24 2,24" />
+                                  </svg>
+                                  <svg viewBox="0 0 28 28" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <rect x="2" y="4" width="24" height="20" rx="3" />
+                                    <circle cx="14" cy="14" r="6" />
+                                  </svg>
+                                  <svg viewBox="0 0 28 28" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <path d="M6 20h16l2 4H4l2-4z" />
+                                    <path d="M8 20V10a4 4 0 014-4h4a4 4 0 014 4v10" />
+                                  </svg>
+                                  <svg viewBox="0 0 28 28" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <circle cx="14" cy="14" r="11" />
+                                    <line x1="6" y1="6" x2="22" y2="22" />
+                                  </svg>
+                                </div>
+                              </div>
+                              {/* Caractéristiques */}
+                              <div className="px-5 py-3.5">
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Caractéristiques</p>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                  Rendu couleur optimal, sensation fine et douce au toucher. Forte tenue et flexibilité.
+                                </p>
+                              </div>
+                              {/* Conditions de pose */}
+                              <div className="px-5 py-3.5">
+                                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Conditions de pose</p>
+                                <div className="grid grid-cols-3 gap-3">
+                                  <div className="flex flex-col items-center gap-1 py-2 rounded-xl bg-slate-50">
+                                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                      <path d="M12 2v20M8 6h8M6 10h12M9 18h6" />
+                                    </svg>
+                                    <span className="text-xs font-bold text-slate-700">150°C</span>
+                                  </div>
+                                  <div className="flex flex-col items-center gap-1 py-2 rounded-xl bg-slate-50">
+                                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                      <circle cx="12" cy="12" r="9" />
+                                      <path d="M12 7v5l3 3" />
+                                    </svg>
+                                    <span className="text-xs font-bold text-slate-700">12 sec</span>
+                                  </div>
+                                  <div className="flex flex-col items-center gap-1 py-2 rounded-xl bg-slate-50">
+                                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                      <path d="M12 2v6M6 8h12v10a2 2 0 01-2 2H8a2 2 0 01-2-2V8z" />
+                                      <path d="M9 22h6" />
+                                    </svg>
+                                    <span className="text-xs font-bold text-slate-700">3 Bars</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="px-5 py-2.5 bg-slate-50/50 border-t border-slate-200/60">
+                              <p className="text-[10px] text-slate-400 text-center">* Ces indications peuvent varier selon le textile marqué.</p>
+                            </div>
+                          </div>
+                        </FadeIn>
+
+                        {/* ═══ Description ═══ */}
+                        {product.description && (
+                          <FadeIn delay={0.15}>
+                            <div className="glass rounded-2xl p-5 ring-1 ring-slate-200/40">
+                              <div className="flex items-start gap-3">
+                                <Info size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                                  {product.description}
+                                </p>
+                              </div>
+                            </div>
+                          </FadeIn>
+                        )}
+
                         <FadeIn delay={0.2}>
                           <div className="glass-strong rounded-2xl overflow-hidden ring-1 ring-slate-200/40 shadow-2xl shadow-black/10">
                             <div className="px-5 py-4 border-b border-slate-200/60">
@@ -330,19 +429,6 @@ export default function LogoConfigurator() {
                           </div>
                         </FadeIn>
 
-                        {/* ═══ Description ═══ */}
-                        {product.description && (
-                          <FadeIn delay={0.25}>
-                            <div className="glass rounded-2xl p-5 ring-1 ring-slate-200/40">
-                              <div className="flex items-start gap-3">
-                                <Info size={16} className="text-slate-500 mt-0.5 shrink-0" />
-                                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                                  {product.description}
-                                </p>
-                              </div>
-                            </div>
-                          </FadeIn>
-                        )}
                       </div>
                     </div>
                   </motion.div>
